@@ -608,7 +608,7 @@ textarea.input-field {
 .slides-container {
   flex: 1;
   overflow-y: auto;
-  padding: 40px 0 100px 0;
+  padding: 40px 20px 100px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -635,6 +635,8 @@ textarea.input-field {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  max-width: 720px;
 }
 
 .slide-page-badge {
@@ -647,7 +649,8 @@ textarea.input-field {
 }
 
 .slide-wrapper {
-  width: 720px;
+  width: 100%;
+  max-width: 720px;
   /* Largura visível do preview */
   aspect-ratio: 960 / 540;
   /* 16:9 Widescreen */
@@ -1667,4 +1670,117 @@ textarea.input-field {
 .service-bonus-name {
   color: #15803d;
   font-weight: bold;
+}
+
+/* Classes Utilitárias do Grid (Suporte para app.js) */
+.grid {
+  display: grid;
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.gap-4 {
+  gap: 16px;
+}
+.mb-2 {
+  margin-bottom: 8px;
+}
+.hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   RESPONSIVIDADE E LAYOUT MOBILE/TABLET
+   ============================================================ */
+@media (max-width: 1024px) {
+  body, html {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .app-container {
+    flex-direction: column;
+    height: auto;
+  }
+  
+  .control-sidebar {
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .sidebar-scrollable {
+    max-height: 550px;
+    overflow-y: auto;
+  }
+  
+  .preview-panel {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .preview-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 15px !important;
+    text-align: center !important;
+    padding: 15px 20px !important;
+  }
+  
+  .preview-header div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .view-mode-selector {
+    justify-content: center;
+    align-self: center;
+  }
+  
+  .contract-preview-container {
+    padding: 20px 10px;
+  }
+  
+  .contract-document {
+    width: 100%;
+    min-height: auto;
+    padding: 20px 15px;
+    font-size: 11px;
+  }
+  
+  .contract-signatures {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    margin-top: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-2-cols,
+  .grid-cols-2,
+  .totals-block,
+  .signatures-block {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .theme-selector-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .sidebar-header {
+    padding: 16px 20px;
+  }
+  
+  .sidebar-scrollable {
+    padding: 16px 20px;
+    max-height: 450px;
+  }
+  
+  .total-card h3 {
+    font-size: 16px;
+  }
 }
