@@ -922,10 +922,10 @@ function addServiceCard(catId, serviceId, groupId) {
   });
 
   // Listeners para digitação direta nos campos
-  priceInput.addEventListener("input", () => { syncSelectedServices(); updatePreview(); });
-  descInput.addEventListener("input", () => { syncSelectedServices(); updatePreview(); });
+  priceInput.addEventListener("input", () => { syncSelectedServices(); updatePreviewDebounced(); });
+  descInput.addEventListener("input", () => { syncSelectedServices(); updatePreviewDebounced(); });
   if (recInput) {
-    recInput.addEventListener("input", () => { syncSelectedServices(); updatePreview(); });
+    recInput.addEventListener("input", () => { syncSelectedServices(); updatePreviewDebounced(); });
   }
 
   const bonusCheckbox = card.querySelector(".service-bonus-checkbox");
@@ -1068,17 +1068,17 @@ function setupEventListeners() {
   // Inputs básicos
   document.getElementById("client-name-input").addEventListener("input", (e) => {
     proposalState.clientName = e.target.value || "Cliente Exemplo";
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("project-name-input").addEventListener("input", (e) => {
     proposalState.projectName = e.target.value || "Aceleração de Performance Digital";
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("validity-input").addEventListener("input", (e) => {
     proposalState.validityDays = parseInt(e.target.value) || 15;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   // Nicho
@@ -1090,50 +1090,50 @@ function setupEventListeners() {
 
   document.getElementById("niche-name-input").addEventListener("input", (e) => {
     proposalState.nicheName = e.target.value || "";
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   // Editor de dores e estratégia
   document.getElementById("pain-points-editor").addEventListener("input", () => {
     const val = document.getElementById("pain-points-editor").value;
     proposalState.customPainPoints = val.split("\n").filter(line => line.trim() !== "");
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("strategy-editor").addEventListener("input", () => {
     proposalState.customStrategy = document.getElementById("strategy-editor").value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   // Condições comerciais
   document.getElementById("contract-term-input").addEventListener("input", (e) => {
     proposalState.contractTerm = e.target.value || "Aviso prévio de 30 dias";
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("payment-terms-input").addEventListener("input", (e) => {
     proposalState.paymentTerms = e.target.value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("setup-payment-input").addEventListener("input", (e) => {
     proposalState.setupPaymentTerms = e.target.value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("media-investment-input").addEventListener("input", (e) => {
     proposalState.mediaInvestment = e.target.value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("work-start-input").addEventListener("input", (e) => {
     proposalState.workStart = e.target.value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   document.getElementById("proposal-notes-input").addEventListener("input", (e) => {
     proposalState.proposalNotes = e.target.value;
-    updatePreview();
+    updatePreviewDebounced();
   });
 
   // Checkbox de slides
@@ -1144,8 +1144,6 @@ function setupEventListeners() {
       updatePreview();
     });
   });
-
-  // Ouvinte de eventos de serviços removidos pois a Option A gerencia localmente seus inputs e seletores
 
   // Botão de download
   document.getElementById("btn-download-pdf").addEventListener("click", () => {
@@ -1186,7 +1184,7 @@ function setupEventListeners() {
     overrideMonthlyInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
       proposalState.overrideMonthly = val === "" ? null : parseFloat(val);
-      updatePreview();
+      updatePreviewDebounced();
     });
   }
 
@@ -1195,7 +1193,7 @@ function setupEventListeners() {
     discountMonthlyInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
       proposalState.discountMonthly = val === "" ? null : parseFloat(val);
-      updatePreview();
+      updatePreviewDebounced();
     });
   }
 
@@ -1204,7 +1202,7 @@ function setupEventListeners() {
     overrideOneOffInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
       proposalState.overrideOneOffAndSetup = val === "" ? null : parseFloat(val);
-      updatePreview();
+      updatePreviewDebounced();
     });
   }
 
@@ -1213,7 +1211,7 @@ function setupEventListeners() {
     discountOneOffInput.addEventListener("input", (e) => {
       const val = e.target.value.trim();
       proposalState.discountOneOff = val === "" ? null : parseFloat(val);
-      updatePreview();
+      updatePreviewDebounced();
     });
   }
 
@@ -1971,6 +1969,21 @@ function updatePreview() {
     showCurrentSlideOnly();
   }
 }
+
+// Função de debounce para adiar execuções repetitivas de renderização
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+const updatePreviewDebounced = debounce(updatePreview, 200);
 
 // Auxiliar: Cria o elemento base do slide (1122x794px)
 function createSlideElement(bgImagePath = null) {
