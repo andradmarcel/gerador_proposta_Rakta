@@ -140,6 +140,28 @@ export function getContractTemplateHTML(data) {
       .contract-document * {
         font-family: Arial, sans-serif !important;
       }
+      
+      /* Otimização de espaçamento para manter as tabelas de identificação e financeiras juntas na mesma página (aplica apenas ao corpo do contrato, não afetando a capa) */
+      .contract-print-table .c9 {
+        padding-top: 6pt !important;
+        padding-bottom: 4pt !important;
+      }
+      .contract-print-table .c4 {
+        padding-bottom: 2pt !important;
+      }
+      .contract-print-table td {
+        padding: 3.5pt 5pt !important;
+      }
+      .contract-print-table p.c10 {
+        padding-bottom: 1pt !important;
+        height: auto !important;
+      }
+      .contract-print-table .c29 {
+        padding-top: 4pt !important;
+      }
+      .contract-print-table .c37 {
+        padding-bottom: 0pt !important;
+      }
 
     </style>
     <div class="contract-document">
@@ -194,73 +216,76 @@ export function getContractTemplateHTML(data) {
         <tbody>
           <tr>
             <td>
-              <h1 class="c9"><span class="c2 c12">IDENTIFICA&Ccedil;&Atilde;O DAS PARTES</span></h1>
-              <p class="c19 c21 c29"><span class="c0"></span></p>
-              <h2 class="c9"><span class="c1 c2 c27">Contratada</span></h2>
-              <p class="c4"><span class="c1 c2">RAKTA PERFORMANCE LAB LTDA</span><span class="c1">, pessoa jur&iacute;dica de direito privado, inscrita no CNPJ sob n&ordm; 61.187.784/0001-01, com sede na Av. Piau&iacute;, n&ordm; 914, CXPST 353, Bairro Estados, Jo&atilde;o Pessoa/PB, CEP 58.030-331, endere&ccedil;o de e-mail ciroccerqueira@gmail.com, neste ato representada por seu representative legal, CIRO COSTA CERQUEIRA, brasileiro, doravante designada CONTRATADA, PARTE ou conjuntamente, PARTES.</span></p>
-              <h2 class="c9"><span class="c1 c2 c52">Contratante</span></h2>
-              <table class="c42">
-                <tr class="c35">
-                  <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Raz&atilde;o Social</span></p></td>
-                  <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractCompany}</span></p></td>
-                </tr>
-                <tr class="c16">
-                  <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">CNPJ</span></p></td>
-                  <td class="c26" colspan="1" rowspan="1"><p class="c33"><span class="c0">${contractCNPJ}</span></p></td>
-                  <td class="c22" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Telefone</span></p></td>
-                  <td class="c25" colspan="1" rowspan="1"><p class="c33"><span class="c0">${contractPhone}</span></p></td>
-                </tr>
-                <tr class="c35">
-                  <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Endere&ccedil;o </span></p></td>
-                  <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractAddress}</span></p></td>
-                </tr>
-                <tr class="c35">
-                  <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Representante </span></p></td>
-                  <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractRepName}</span></p></td>
-                </tr>
-                <tr class="c35">
-                  <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2 c13">E-mail</span></p></td>
-                  <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractRepEmail}</span></p></td>
-                </tr>
-              </table>
-              <p class="c37 c19 c21"><span class="c0"></span></p>
-              <p class="c4"><span class="c1">Doravante designado(a) CONTRATANTE, PARTE ou conjuntamente, PARTES.</span></p>
-              <p class="c33 c19" style="margin-top: 30px;"><span class="c12 c2">CONDI&Ccedil;&Otilde;ES DO PRESENTE CONTRATO</span></p>
-              <p class="c29 c19 c21"><span class="c0"></span></p>
-              <h2 class="c9"><span class="c1 c2 c52">Recorr&ecirc;ncia</span></h2>
-              <table class="c42">
-                <tr class="c35">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Data de in&iacute;cio do projeto</span></p></td>
-                  <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${projectStartDate}</span></p></td>
-                </tr>
-                <tr class="c16">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Valor da Parcela Mensal</span></p></td>
-                  <td class="c14" colspan="1" rowspan="1"><p class="c5"><span class="c1">${recurrenciaPreco}</span></p></td>
-                  <td class="c28" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Dia de vencimento</span></p></td>
-                  <td class="c31" colspan="1" rowspan="1"><p class="c33"><span class="c0">Todo dia ${recurrenciaDia}</span></p></td>
-                </tr>
-                <tr class="c35">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">M&eacute;todo de Pagamento</span></p></td>
-                  <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${recurrenciaMetodo}</span></p></td>
-                </tr>
-              </table>
-              <h2 class="c9"><span class="c1 c2 c52">Implementa&ccedil;&atilde;o (pontual)</span></h2>
-              <table class="c42">
-                <tr class="c35">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Data de in&iacute;cio do projeto</span></p></td>
-                  <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${projectStartDate}</span></p></td>
-                </tr>
-                <tr class="c16">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Valor da implementa&ccedil;&atilde;o</span></p></td>
-                  <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${implementacaoPreco}</span></p></td>
-                </tr>
-                <tr class="c35">
-                  <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">M&eacute;todo de Pagamento</span></p></td>
-                  <td class="c14" colspan="1" rowspan="1"><p class="c33"><span class="c0">${implementacaoMetodo}</span></p></td>
-                  <td class="c28" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Qtd. Parcelas</span></p></td>
-                  <td class="c31" colspan="1" rowspan="1"><p class="c33"><span class="c0">${implementacaoParcelas}x</span></p></td>
-                </tr>
-              </table>
+              <div style="page-break-inside: avoid;">
+                <h1 class="c9" style="margin-top: 0px;"><span class="c2 c12">IDENTIFICA&Ccedil;&Atilde;O DAS PARTES</span></h1>
+                <p class="c19 c21 c29"><span class="c0"></span></p>
+                <h2 class="c9"><span class="c1 c2 c27">Contratada</span></h2>
+                <p class="c4"><span class="c1 c2">RAKTA PERFORMANCE LAB LTDA</span><span class="c1">, pessoa jur&iacute;dica de direito privado, inscrita no CNPJ sob n&ordm; 61.187.784/0001-01, com sede na Av. Piau&iacute;, n&ordm; 914, CXPST 353, Bairro Estados, Jo&atilde;o Pessoa/PB, CEP 58.030-331, endere&ccedil;o de e-mail ciroccerqueira@gmail.com, neste ato representada por seu representative legal, CIRO COSTA CERQUEIRA, brasileiro, doravante designada CONTRATADA, PARTE ou conjuntamente, PARTES.</span></p>
+                <h2 class="c9"><span class="c1 c2 c52">Contratante</span></h2>
+                <table class="c42">
+                  <tr class="c35">
+                    <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Raz&atilde;o Social</span></p></td>
+                    <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractCompany}</span></p></td>
+                  </tr>
+                  <tr class="c16">
+                    <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">CNPJ</span></p></td>
+                    <td class="c26" colspan="1" rowspan="1"><p class="c33"><span class="c0">${contractCNPJ}</span></p></td>
+                    <td class="c22" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Telefone</span></p></td>
+                    <td class="c25" colspan="1" rowspan="1"><p class="c33"><span class="c0">${contractPhone}</span></p></td>
+                  </tr>
+                  <tr class="c35">
+                    <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Endere&ccedil;o </span></p></td>
+                    <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractAddress}</span></p></td>
+                  </tr>
+                  <tr class="c35">
+                    <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Representante </span></p></td>
+                    <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractRepName}</span></p></td>
+                  </tr>
+                  <tr class="c35">
+                    <td class="c30" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2 c13">E-mail</span></p></td>
+                    <td class="c43" colspan="3" rowspan="1"><p class="c33"><span class="c0">${contractRepEmail}</span></p></td>
+                  </tr>
+                </table>
+                <p class="c37 c19 c21"><span class="c0"></span></p>
+                <p class="c4"><span class="c1">Doravante designado(a) CONTRATANTE, PARTE ou conjuntamente, PARTES.</span></p>
+                
+                <p class="c33 c19" style="margin-top: 30px;"><span class="c12 c2">CONDI&Ccedil;&Otilde;ES DO PRESENTE CONTRATO</span></p>
+                <p class="c29 c19 c21"><span class="c0"></span></p>
+                <h2 class="c9" style="margin-top: 10px;"><span class="c1 c2 c52">Recorr&ecirc;ncia</span></h2>
+                <table class="c42">
+                  <tr class="c35">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Data de in&iacute;cio do projeto</span></p></td>
+                    <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${projectStartDate}</span></p></td>
+                  </tr>
+                  <tr class="c16">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Valor da Parcela Mensal</span></p></td>
+                    <td class="c14" colspan="1" rowspan="1"><p class="c5"><span class="c1">${recurrenciaPreco}</span></p></td>
+                    <td class="c28" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Dia de vencimento</span></p></td>
+                    <td class="c31" colspan="1" rowspan="1"><p class="c33"><span class="c0">Todo dia ${recurrenciaDia}</span></p></td>
+                  </tr>
+                  <tr class="c35">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">M&eacute;todo de Pagamento</span></p></td>
+                    <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${recurrenciaMetodo}</span></p></td>
+                  </tr>
+                </table>
+                <h2 class="c9" style="margin-top: 15px;"><span class="c1 c2 c52">Implementa&ccedil;&atilde;o (pontual)</span></h2>
+                <table class="c42">
+                  <tr class="c35">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Data de in&iacute;cio do projeto</span></p></td>
+                    <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${projectStartDate}</span></p></td>
+                  </tr>
+                  <tr class="c16">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c1 c2">Valor da implementa&ccedil;&atilde;o</span></p></td>
+                    <td class="c18" colspan="3" rowspan="1"><p class="c33"><span class="c0">${implementacaoPreco}</span></p></td>
+                  </tr>
+                  <tr class="c35">
+                    <td class="c40" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">M&eacute;todo de Pagamento</span></p></td>
+                    <td class="c14" colspan="1" rowspan="1"><p class="c33"><span class="c0">${implementacaoMetodo}</span></p></td>
+                    <td class="c28" colspan="1" rowspan="1"><p class="c5"><span class="c13 c1 c2">Qtd. Parcelas</span></p></td>
+                    <td class="c31" colspan="1" rowspan="1"><p class="c33"><span class="c0">${implementacaoParcelas}x</span></p></td>
+                  </tr>
+                </table>
+              </div>
 
               <h1 class="c19 c33" style="margin-top: 40px;"><span class="c12 c2">DESCRITIVO DOS SERVI&Ccedil;OS (M&Oacute;DULOS)</span></h1>
               <p class="c15 c34 c19"><span class="c0"></span></p>
