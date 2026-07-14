@@ -439,8 +439,8 @@ export function getContractTemplateHTML(data) {
                 <div class="contract-signatures">
                   <div class="signature-block">
                     <p class="c3"><span class="c1 c2">CONTRATANTE</span></p>
-                    <p class="c3"><span class="c1">Raz&atilde;o Social: \${contractCompany}</span></p>
-                    <p class="c3"><span class="c1">CNPJ: \${contractCNPJ}</span></p>
+                    <p class="c3"><span class="c1">Raz&atilde;o Social: ${contractCompany}</span></p>
+                    <p class="c3"><span class="c1">CNPJ: ${contractCNPJ}</span></p>
                     <div class="signature-line">
                       Assinatura
                     </div>
