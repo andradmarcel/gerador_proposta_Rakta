@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Propostas Rakta | Performance Lab</title>
+
+  <!-- Fontes do Google (Space Grotesk para Títulos e Inter para Corpo) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <!-- Font Awesome para Ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Estilo customizado do Gerador -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="app-container">
+
+    <!-- PAINEL DE CONTROLE (Esquerda) -->
+    <aside class="control-sidebar">
+      <div class="sidebar-header">
+        <i class="fa-solid fa-hourglass-half" style="color: #e30613; font-size: 20px;"></i>
+        <h1>Rakta<span>.</span>Digital</h1>
+      </div>
+
+      <!-- Seletor de Modo (Abas) -->
+      <div class="app-mode-tabs">
+        <button type="button" id="tab-proposal" class="mode-tab active">
+          <i class="fa-solid fa-file-invoice"></i> Proposta
+        </button>
+        <button type="button" id="tab-contract" class="mode-tab">
+          <i class="fa-solid fa-file-signature"></i> Contrato (MSA)
+        </button>
+      </div>
+
+      <div class="sidebar-scrollable">
+
+        <!-- CONTEÚDO DA PROPOSTA (Visível por padrão) -->
+        <div id="sidebar-proposal-content">
+
+          <!-- Seção 1: Informações Gerais -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-circle-info"></i> Identificação</h3>
+
+            <div class="input-group">
+              <label for="client-name-input">Nome do Cliente</label>
+              <input type="text" id="client-name-input" class="input-field" value="Cliente Exemplo"
+                placeholder="Ex: Nutriderm ou CorpX Bank">
+            </div>
+
+            <div class="input-group">
+              <label for="project-name-input">Nome do Projeto</label>
+              <input type="text" id="project-name-input" class="input-field" value="Aceleração de Performance Digital"
+                placeholder="Ex: Escala de Mídia & Dados">
+            </div>
+
+            <div class="input-group">
+              <label for="validity-input">Validade da Proposta (Dias)</label>
+              <input type="number" id="validity-input" class="input-field" value="15" min="1" max="90">
+            </div>
+          </section>
+
+          <!-- Seção: Identidade Visual -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-palette"></i> Identidade Visual</h3>
+            <div class="theme-selector-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+              <button type="button" class="theme-btn active" data-theme="red">Rakta</button>
+              <button type="button" class="theme-btn" data-theme="gold">Gold</button>
+              <button type="button" class="theme-btn" data-theme="blue">Tech</button>
+              <button type="button" class="theme-btn" data-theme="green">Emerald</button>
+            </div>
+          </section>
+
+          <!-- Seção: Rascunhos -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-floppy-disk"></i> Rascunhos</h3>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btn-export-json" class="btn-secondary"
+                style="flex: 1; padding: 10px; font-size: 11px; margin-bottom: 0;">
+                <i class="fa-solid fa-file-export"></i> Exportar
+              </button>
+              <button type="button" id="btn-import-json" class="btn-secondary"
+                style="flex: 1; padding: 10px; font-size: 11px; margin-bottom: 0;">
+                <i class="fa-solid fa-file-import"></i> Importar
+              </button>
+              <input type="file" id="import-json-file" accept=".json" style="display: none;">
+            </div>
+            <button type="button" id="btn-reset-proposal" class="btn-reset">
+              <i class="fa-solid fa-rotate-left"></i> Limpar Tudo / Resetar
+            </button>
+            <p id="autosave-indicator"
+              style="color: #10b981; font-size: 10px; margin-top: 8px; font-weight: 600; display: none;">
+              <i class="fa-solid fa-circle-check"></i> Alterações salvas localmente
+            </p>
+          </section>
+
+          <!-- Seção 2: Personalização por Nicho -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-bullseye"></i> Nicho do Cliente</h3>
+
+            <div class="input-group">
+              <label for="niche-select">Carregar Modelo de Nicho</label>
+              <select id="niche-select" class="input-field">
+                <!-- Populado dinamicamente via JS -->
+              </select>
+            </div>
+
+            <div class="input-group">
+              <label for="niche-name-input">Nicho do Cliente (Texto Exibido)</label>
+              <input type="text" id="niche-name-input" class="input-field" value="E-commerce & Varejo Digital"
+                placeholder="Ex: E-commerce, Clínica Médica, SaaS B2B">
+            </div>
+
+            <div class="input-group">
+              <label for="pain-points-editor">Dores do Cliente (1 por linha)</label>
+              <textarea id="pain-points-editor" class="input-field text-xs" rows="4"
+                placeholder="Abandono crônico de carrinho..."></textarea>
+            </div>
+
+            <div class="input-group">
+              <label for="strategy-editor">Estratégia Recomendada</label>
+              <textarea id="strategy-editor" class="input-field text-xs" rows="5"
+                placeholder="Estratégia de crescimento..."></textarea>
+            </div>
+          </section>
+
+          <!-- Seção: Configuração do Gemini -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-wand-magic-sparkles"></i> Inteligência Artificial (Gemini)</h3>
+
+            <div class="input-group">
+              <label for="gemini-api-key">Chave de API do Gemini</label>
+              <div style="position: relative; display: flex; align-items: center; width: 100%;">
+                <input type="password" id="gemini-api-key" class="input-field"
+                  placeholder="Insira sua API Key do Gemini" style="padding-right: 40px;">
+                <button type="button" id="btn-toggle-api-key"
+                  style="position: absolute; right: 10px; background: none; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; height: 100%; padding: 0 5px;"
+                  title="Mostrar/Ocultar Chave">
+                  <i class="fa-solid fa-eye-slash"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label for="gemini-tone-select">Tom da Redação</label>
+              <select id="gemini-tone-select" class="input-field text-xs" style="padding: 10px 12px;">
+                <option value="persuasivo">Persuasivo & Comercial</option>
+                <option value="tecnico">Técnico & Detalhado</option>
+                <option value="direto">Direto & Minimalista</option>
+              </select>
+            </div>
+
+            <button type="button" id="btn-generate-gemini" class="btn-secondary" style="margin-bottom: 0;">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Adaptar Escopos ao Nicho com IA
+            </button>
+          </section>
+
+          <!-- Seção 3: Seleção de Serviços -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-list-check"></i> Escopo de Serviços</h3>
+            <div id="services-accordion">
+              <!-- Accordions populados dinamicamente via JS -->
+            </div>
+
+            <button type="button" id="btn-add-custom-service-trigger" class="btn-secondary"
+              style="width: 100%; margin-top: 15px; border-style: dashed; border-color: rgba(255,255,255,0.15); margin-bottom: 0;">
+              <i class="fa-solid fa-circle-plus"></i> Criar Serviço Customizado
+            </button>
+
+            <div id="custom-service-form" class="hidden"
+              style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px;">
+              <h4
+                style="font-size: 11px; text-transform: uppercase; color: var(--rakta-red); margin-bottom: 12px; font-family: var(--font-display); letter-spacing: 0.05em; font-weight: 700;">
+                Novo Serviço Customizado</h4>
+              <div class="input-group">
+                <label for="custom-service-name" style="font-size: 9px;">Nome do Serviço</label>
+                <input type="text" id="custom-service-name" class="input-field text-xs" style="padding: 8px 10px;"
+                  placeholder="Ex: Produção de Blogposts">
+              </div>
+              <div class="grid-2-cols" style="margin-bottom: 12px; gap: 8px;">
+                <div class="input-group" style="margin-bottom: 0;">
+                  <label for="custom-service-type" style="font-size: 9px;">Tipo</label>
+                  <select id="custom-service-type" class="input-field text-xs" style="padding: 8px 10px;">
+                    <option value="recorrente">Recorrente</option>
+                    <option value="pontual">Pontual</option>
+                  </select>
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                  <label for="custom-service-category" style="font-size: 9px;">Categoria</label>
+                  <select id="custom-service-category" class="input-field text-xs" style="padding: 8px 10px;">
+                    <option value="performance">Performance & Growth</option>
+                    <option value="branding">Branding & Criação</option>
+                    <option value="digital">Canais & Hubs</option>
+                    <option value="tecnologia">Dev & Tech</option>
+                    <option value="crm">CRM & Automação</option>
+                    <option value="consultoria">Consultorias</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid-2-cols" style="margin-bottom: 12px; gap: 8px;">
+                <div class="input-group" style="margin-bottom: 0;">
+                  <label for="custom-service-price" style="font-size: 9px;">Preço (R$)</label>
+                  <input type="number" id="custom-service-price" class="input-field text-xs" style="padding: 8px 10px;"
+                    placeholder="Ex: 1500">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                  <label for="custom-service-recurring" style="font-size: 9px;">CRM Mensal (Se Setup)</label>
+                  <input type="number" id="custom-service-recurring" class="input-field text-xs"
+                    style="padding: 8px 10px;" placeholder="Opcional">
+                </div>
+              </div>
+              <div class="input-group">
+                <label for="custom-service-desc" style="font-size: 9px;">Entregáveis (separados por vírgula)</label>
+                <textarea id="custom-service-desc" class="input-field text-xs" style="padding: 8px 10px;" rows="3"
+                  placeholder="Ex: Item 1, Item 2, Item 3..."></textarea>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="btn-save-custom-service" class="btn-primary"
+                  style="flex: 1; padding: 8px; font-size: 11px;">Adicionar</button>
+                <button type="button" id="btn-cancel-custom-service" class="btn-secondary"
+                  style="flex: 1; padding: 8px; font-size: 11px; margin-bottom: 0;">Cancelar</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Seção: Ajuste de Valores da Proposta -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-calculator"></i> Ajuste Final de Valores</h3>
+
+            <div class="grid-2-cols">
+              <div class="input-group">
+                <label for="override-monthly-input">Mensal Manual (R$)</label>
+                <input type="number" id="override-monthly-input" class="input-field" placeholder="Automático" min="0">
+              </div>
+
+              <div class="input-group">
+                <label for="discount-monthly-input">Desconto Mensal (R$)</label>
+                <input type="number" id="discount-monthly-input" class="input-field" placeholder="Ex: 500" min="0">
+              </div>
+            </div>
+
+            <div class="grid-2-cols">
+              <div class="input-group">
+                <label for="override-oneoff-input">Setup Manual (R$)</label>
+                <input type="number" id="override-oneoff-input" class="input-field" placeholder="Automático" min="0">
+              </div>
+
+              <div class="input-group">
+                <label for="discount-oneoff-input">Desconto Setup (R$)</label>
+                <input type="number" id="discount-oneoff-input" class="input-field" placeholder="Ex: 1000" min="0">
+              </div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 11px; margin-top: -8px; line-height: 1.3;">
+              Ajuste os totais definindo um valor manual ou aplicando um desconto sobre o valor calculado.
+            </p>
+          </section>
+
+          <!-- Seção 4: Condições Comerciais -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-file-contract"></i> Condições Comerciais</h3>
+
+            <div class="input-group">
+              <label for="contract-term-input">Prazo Contratual</label>
+              <input type="text" id="contract-term-input" class="input-field" value="Aviso prévio de 30 dias"
+                placeholder="Ex: Aviso prévio de 30 dias">
+            </div>
+
+            <div class="input-group">
+              <label for="payment-terms-input">Pagamento Mensal (Recorrência)</label>
+              <textarea id="payment-terms-input" class="input-field text-xs"
+                rows="2">Faturamento mensal via boleto, Pix ou cartão de crédito. Primeira mensalidade em D+7 após a assinatura do contrato.</textarea>
+            </div>
+
+            <div class="input-group">
+              <label for="setup-payment-input">Pagamento de Setups / Projetos</label>
+              <textarea id="setup-payment-input" class="input-field text-xs"
+                rows="2">Parcelamento em até 6x sem juros.</textarea>
+            </div>
+
+            <div class="input-group">
+              <label for="media-investment-input">Investimento em Mídia Recomendado</label>
+              <input type="text" id="media-investment-input" class="input-field" value="R$ 2.000,00 a R$ 5.000,00 / mês"
+                placeholder="Ex: R$ 2.000,00/mês ou A definir">
+            </div>
+
+            <div class="input-group">
+              <label for="work-start-input">Início dos Trabalhos</label>
+              <input type="text" id="work-start-input" class="input-field" value="D+10 dias após assinatura contratual."
+                placeholder="Ex: D+10 dias úteis após assinatura">
+            </div>
+
+            <div class="input-group">
+              <label for="proposal-notes-input">Observações da Proposta</label>
+              <textarea id="proposal-notes-input" class="input-field text-xs" rows="2"
+                placeholder="Ex: Valores válidos mediante contratação conjunta."></textarea>
+            </div>
+          </section>
+
+          <!-- Seção 5: Configurações de Slides -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-sliders"></i> Slides Inclusos</h3>
+
+            <div class="toggle-grid">
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-cover" class="slide-toggle" data-slide="cover" checked>
+                <label for="toggle-cover" class="toggle-label">01. Capa</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-problem" class="slide-toggle" data-slide="problem" checked>
+                <label for="toggle-problem" class="toggle-label">02. Diagnóstico</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-testimonials" class="slide-toggle" data-slide="testimonials" checked>
+                <label for="toggle-testimonials" class="toggle-label">03. Depoimentos</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-web" class="slide-toggle" data-slide="portfolio_web" checked>
+                <label for="toggle-web" class="toggle-label">04. Portfólio Web</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-social" class="slide-toggle" data-slide="portfolio_social" checked>
+                <label for="toggle-social" class="toggle-label">05. Portfólio Social</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-method" class="slide-toggle" data-slide="method" checked>
+                <label for="toggle-method" class="toggle-label">06. Metodologia</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-services" class="slide-toggle" data-slide="services" checked>
+                <label for="toggle-services" class="toggle-label">07. Solução/Escopo</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-investment" class="slide-toggle" data-slide="investment" checked>
+                <label for="toggle-investment" class="toggle-label">08. Investimento</label>
+              </div>
+              <div class="toggle-item">
+                <input type="checkbox" id="toggle-logos" class="slide-toggle" data-slide="logos" checked>
+                <label for="toggle-logos" class="toggle-label">09. Fechamento</label>
+              </div>
+            </div>
+          </section>
+        </div> <!-- Fim de #sidebar-proposal-content -->
+
+        <!-- CONTEÚDO DO CONTRATO (Escondido por padrão) -->
+        <div id="sidebar-contract-content" class="hidden">
+          <!-- Seção 1: Identificação da Contratante -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-building"></i> Contratante</h3>
+
+            <div class="input-group">
+              <label for="contract-company-input">Razão Social / Nome</label>
+              <input type="text" id="contract-company-input" class="input-field" placeholder="Ex: Nutriderm LTDA">
+            </div>
+
+            <div class="input-group">
+              <label for="contract-cnpj-input">CNPJ</label>
+              <input type="text" id="contract-cnpj-input" class="input-field" placeholder="Ex: 00.000.000/0001-00">
+            </div>
+
+            <div class="input-group">
+              <label for="contract-phone-input">Telefone</label>
+              <input type="text" id="contract-phone-input" class="input-field" placeholder="Ex: (83) 99999-9999">
+            </div>
+
+            <div class="input-group">
+              <label for="contract-address-input">Endereço Completo</label>
+              <input type="text" id="contract-address-input" class="input-field"
+                placeholder="Ex: Av. Paulista, 1000, Apt 12, Bela Vista, São Paulo/SP, CEP 01310-100">
+            </div>
+
+            <div class="input-group">
+              <label for="contract-rep-name-input">Representante Legal (Nome)</label>
+              <input type="text" id="contract-rep-name-input" class="input-field" placeholder="Ex: João da Silva">
+            </div>
+
+            <div class="input-group">
+              <label for="contract-rep-email-input">E-mail do Representante</label>
+              <input type="email" id="contract-rep-email-input" class="input-field" placeholder="Ex: joao@cliente.com">
+            </div>
+          </section>
+
+          <!-- Seção 2: Condições e Vigência -->
+          <section class="sidebar-section">
+            <h3><i class="fa-solid fa-file-invoice-dollar"></i> Condições Financeiras</h3>
+
+            <div class="input-group">
+              <label for="contract-start-date-input">Data de Início do Contrato</label>
+              <input type="date" id="contract-start-date-input" class="input-field">
+            </div>
+
+            <h4
+              style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; margin-top: 15px; font-weight: 700; letter-spacing: 0.05em;">
+              Recorrência Mensal</h4>
+            <div class="grid-2-cols" style="margin-bottom: 12px;">
+              <div class="input-group" style="margin-bottom: 0;">
+                <label for="contract-due-day-rec-input">Dia Vencimento</label>
+                <input type="number" id="contract-due-day-rec-input" class="input-field" value="5" min="1" max="31">
+              </div>
+              <div class="input-group" style="margin-bottom: 0;">
+                <label for="contract-payment-rec-select">Método Pagamento</label>
+                <select id="contract-payment-rec-select" class="input-field">
+                  <option value="Boleto bancário">Boleto bancário</option>
+                  <option value="Pix">Pix</option>
+                  <option value="Cartão de crédito">Cartão de crédito</option>
+                  <option value="Transferência bancária">TED/Doc</option>
+                </select>
+              </div>
+            </div>
+
+            <h4
+              style="font-size: 10px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; margin-top: 15px; font-weight: 700; letter-spacing: 0.05em;">
+              Implementação / Projetos</h4>
+            <div class="input-group">
+              <label for="contract-setup-installments-input">Qtd. Parcelas</label>
+              <input type="number" id="contract-setup-installments-input" class="input-field" value="6" min="1"
+                max="24">
+            </div>
+            <div class="input-group">
+              <label for="contract-payment-setup-select">Método Pagamento</label>
+              <select id="contract-payment-setup-select" class="input-field">
+                <option value="Pix">Pix</option>
+                <option value="Boleto bancário">Boleto bancário</option>
+                <option value="Cartão de crédito">Cartão de crédito</option>
+                <option value="Transferência bancária">TED/Doc</option>
+              </select>
+            </div>
+          </section>
+        </div>
+
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="btn-download-pdf" class="btn-primary">
+          <i class="fa-solid fa-file-pdf"></i> Gerar Proposta em PDF
+        </button>
+        <button id="btn-print-contract" class="btn-primary hidden">
+          <i class="fa-solid fa-print"></i> Imprimir Contrato (PDF)
+        </button>
+      </div>
+    </aside>
+
+    <!-- PAINEL DE VISUALIZAÇÃO (Direita) -->
+    <main class="preview-panel">
+      <header class="preview-header" id="proposal-preview-header"
+        style="display: flex; justify-content: space-between; align-items: center; padding: 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); background: #050506;">
+        <div>
+          <h2>Visualização da Proposta Comercial</h2>
+          <span class="preview-badge"><i class="fa-solid fa-eye animate-pulse"></i> Modo de Preview A4 Landscape
+            (16:9)</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <!-- Seletor de Modo de Visualização -->
+          <div class="view-mode-selector"
+            style="display: flex; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 2px;">
+            <button type="button" id="btn-mode-scroll" class="active-view-mode"
+              style="background: var(--rakta-red); border: none; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-arrows-up-down"></i> Rolar
+            </button>
+            <button type="button" id="btn-mode-presentation"
+              style="background: transparent; border: none; color: var(--text-secondary); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-images"></i> Slides
+            </button>
+          </div>
+
+          <!-- Controles de Slides (Oculto por padrão no modo Rolar) -->
+          <div id="slide-nav-controls" class="hidden" style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" id="btn-prev-slide" class="btn-secondary"
+              style="padding: 6px 10px; font-size: 11px; margin-bottom: 0; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span id="slide-nav-indicator"
+              style="font-size: 11px; font-family: var(--font-display); font-weight: bold; color: var(--text-primary); min-width: 40px; text-align: center;">1/9</span>
+            <button type="button" id="btn-next-slide" class="btn-secondary"
+              style="padding: 6px 10px; font-size: 11px; margin-bottom: 0; min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <button type="button" id="btn-fullscreen-presentation" class="btn-secondary"
+            style="margin-bottom: 0; padding: 6px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; height: 32px; align-items: center; justify-content: center;">
+            <i class="fa-solid fa-expand"></i> Tela Cheia
+          </button>
+        </div>
+      </header>
+
+      <div class="slides-container" id="slides-preview">
+        <!-- Slides inseridos dinamicamente aqui -->
+      </div>
+
+      <!-- PAINEL DO CONTRATO (Escondido por padrão) -->
+      <header class="preview-header hidden" id="contract-preview-header"
+        style="display: flex; justify-content: space-between; align-items: center; padding: 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); background: #050506;">
+        <div>
+          <h2>Visualização do Contrato (MSA)</h2>
+          <span class="preview-badge"><i class="fa-solid fa-file-contract"></i> Visualização A4 Impressão</span>
+        </div>
+        <div>
+          <button type="button" id="btn-print-contract-top" class="btn-primary"
+            style="margin-bottom: 0; padding: 8px 16px; font-size: 12px; height: 32px; letter-spacing: 0.05em;">
+            <i class="fa-solid fa-print"></i> Imprimir Contrato
+          </button>
+        </div>
+      </header>
+
+      <div class="contract-preview-container hidden" id="contract-preview">
+        <!-- Contrato em HTML renderizado dinamicamente -->
+      </div>
+    </main>
+
+  </div>
+
+  <!-- html2canvas: captura de slides como imagem -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- jsPDF: montagem do PDF página a página -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Template HTML do Contrato -->
+  <script src="contractTemplate.js"></script>
+
+  <!-- Lógica Javascript da Aplicação -->
+  <script src="app.js"></script>
+</body>
+
+</html>
