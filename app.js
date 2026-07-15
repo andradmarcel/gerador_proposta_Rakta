@@ -972,8 +972,9 @@ function updatePreview() {
           let bulletsHTML = "";
           bullets.forEach(b => { bulletsHTML += `<li><span class="bullet-red-small">•</span> ${b}</li>`; });
           const bonusBadge = srv.isBonus ? getBonusBadgeHTML() : "";
+          const compactClass = getCompactClassForService(srv.description);
           servicesCardsHTML += `
-            <div class="service-preview-card ${srv.isBonus ? 'service-preview-card-bonus' : ''}">
+            <div class="service-preview-card ${srv.isBonus ? 'service-preview-card-bonus' : ''} ${compactClass}">
               <div class="service-preview-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <h3>${srv.name}</h3>
                 ${bonusBadge}
@@ -1009,8 +1010,9 @@ function updatePreview() {
           let bulletsHTML = "";
           bullets.forEach(b => { bulletsHTML += `<li><span class="bullet-red-small">•</span> ${b}</li>`; });
           const bonusBadge = srv.isBonus ? getBonusBadgeHTML() : "";
+          const compactClass = getCompactClassForService(srv.description);
           servicesCardsHTML += `
-            <div class="service-preview-card ${srv.isBonus ? 'service-preview-card-bonus' : ''}">
+            <div class="service-preview-card ${srv.isBonus ? 'service-preview-card-bonus' : ''} ${compactClass}">
               <div class="service-preview-header" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
                 <h3>${srv.name}</h3>
                 ${bonusBadge}
@@ -1603,8 +1605,30 @@ function parseDescriptionToBullets(descText) {
 
   let text = descText.trim();
 
-  // Divide por vírgulas que não estejam dentro de parênteses
-  let parts = text.split(/,(?![^(]*\))/).map(p => p.trim()).filter(p => p.length > 0);
+  // Verifica se há quebras de linha
+  let lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  let parts = [];
+
+  if (lines.length > 1) {
+    // Possui quebras de linha, tratar cada linha como um bullet
+    lines.forEach(line => {
+      // Remove marcadores comuns de lista no início da linha (ex: -, *, •, 1., a))
+      let cleaned = line
+        .replace(/^[-\*\u2022\u25E6\u2023\u2043\u25CB\u25CF\u25A0\u25A1]\s*/, "")
+        .replace(/^\d+[\.\)]\s*/, "")
+        .trim();
+      if (cleaned.length > 0) {
+        parts.push(cleaned);
+      }
+    });
+  } else {
+    // Sem quebras de linha, divide por ponto e vírgula se houver, ou por vírgula normal
+    if (text.includes(';')) {
+      parts = text.split(/;(?![^(]*\))/).map(p => p.trim()).filter(p => p.length > 0);
+    } else {
+      parts = text.split(/,(?![^(]*\))/).map(p => p.trim()).filter(p => p.length > 0);
+    }
+  }
 
   return parts
     .map(p => p.trim())
@@ -1618,6 +1642,23 @@ function parseDescriptionToBullets(descText) {
       }
       return s;
     });
+}
+
+// Determina se o card de serviço precisa de uma estilização mais compacta para não cortar o texto
+function getCompactClassForService(description) {
+  if (!description) return "";
+  const bullets = parseDescriptionToBullets(description);
+  const totalLength = description.length;
+  const numBullets = bullets.length;
+
+  if (totalLength > 750 || numBullets > 7) {
+    return "compact-lg";
+  } else if (totalLength > 600 || numBullets > 6) {
+    return "compact-md";
+  } else if (totalLength > 480 || numBullets > 5) {
+    return "compact-sm";
+  }
+  return "";
 }
 
 // Carrega a chave da API do Gemini a partir do localStorage
@@ -1647,6 +1688,9 @@ async function generateWithGemini() {
   // Salva no localStorage
   localStorage.setItem("rakta_gemini_api_key", apiKey);
 
+  // Sincroniza os serviços selecionados a partir dos inputs atuais na UI antes de enviar para a IA
+  syncSelectedServices();
+
   const btn = document.getElementById("btn-generate-gemini");
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
@@ -1660,27 +1704,17 @@ async function generateWithGemini() {
   const toneMap = {
     "persuasivo": "persuasivo e comercial — use linguagem que venda, com benefícios claros e gatilhos de valor",
     "tecnico": "técnico e detalhado — seja preciso, formal e use terminologia especializada de marketing",
-    "direto": "direto e minimalista — seja conciso, objetivo e evite floreios"
+    "direto": "direto e minimalista — seja conciso, objective e evite floreios"
   };
   const selectedTone = toneSelect ? toneSelect.value : "persuasivo";
   const toneDescription = toneMap[selectedTone] || toneMap["persuasivo"];
 
-  // Lista de serviços simplificada para enviar à IA (usa a descrição original do template se for um serviço padrão para evitar acumular formatação anterior ou dados de outro cliente/nicho)
+  // Lista de serviços simplificada para enviar à IA usando o que está escrito em cada serviço atualmente
   const servicesList = proposalState.selectedServices.map(s => {
-    let baseDescription = s.description;
-    
-    // Tenta obter a descrição original do template estático do banco de dados
-    if (servicesData[s.categoryId]) {
-      const standardService = servicesData[s.categoryId].services.find(srv => srv.id === s.serviceId);
-      if (standardService && standardService.levels[s.levelId]) {
-        baseDescription = standardService.levels[s.levelId].description;
-      }
-    }
-    
     return {
       id: s.serviceId,
       name: s.name,
-      description: baseDescription
+      description: s.description
     };
   });
 
