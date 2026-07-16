@@ -1810,7 +1810,10 @@ O seu objetivo é:
 2. Criar uma Estratégia Recomendada sob medida para o cliente de acordo com as seguintes dores identificadas:
 ${proposalState.customPainPoints.map(p => `- ${p}`).join("\n")}
 
-A Estratégia Recomendada deve ser estruturada em 3 ou 4 frases curtas e objetivas, onde cada frase descreve uma ação prática. Separe cada frase com um ponto final (ex: "Frase curta 1. Frase curta 2. Frase curta 3.").
+Regras estritas para a Estratégia Recomendada:
+- A estratégia recomendada deve propor soluções para as dores do cliente utilizando EXCLUSIVAMENTE as ações, canais e serviços selecionados/inclusos na proposta (listados no JSON abaixo).
+- NUNCA recomende, mencione ou faça alusão a ações, canais ou serviços que não estejam presentes na lista abaixo (por exemplo, se o serviço de "Gestão de CRM", "Landing Page" ou "E-commerce" não estiver listado abaixo, não sugira disparos de e-mail, criação de páginas ou automações correlatas na estratégia).
+- A estratégia deve ser estruturada em 3 ou 4 frases curtas e objetivas, onde cada frase descreve uma ação prática focada no escopo contratado. Separe cada frase com um ponto final (ex: "Frase curta 1. Frase curta 2. Frase curta 3.").
 
 Regras estritas para o escopo de entregas ("description"):
 - O escopo deve ser escrito como uma lista de 4 a 6 itens (entregáveis) separados por vírgula.
@@ -2885,7 +2888,7 @@ function updateContractPreview() {
       const months = parseInt(monthsMatch[1]);
       const monthsWords = numberToPortugueseWords(months);
       
-      const newParagraph11_1 = `<p class="c4"><span class="c1 c6">11.1. O presente contrato ter&aacute; prazo de vig&ecirc;ncia determinado de ${months} (${monthsWords}) meses. Caso o CONTRATANTE opte pela rescis&atilde;o antecipada deste instrumento antes do t&eacute;rmino do prazo estipulado, ficar&aacute; obrigado a pagar &agrave; CONTRATADA multa contratual equivalente ao valor total das parcelas mensais restantes para o t&eacute;rmino do prazo contratado.</span></p>`;
+      const newParagraph11_1 = `<p class="c4"><span class="c1 c6">11.1. O presente contrato ter&aacute; prazo de vig&ecirc;ncia determinado de ${months} (${monthsWords}) meses. Caso o CONTRATANTE opte pela rescis&atilde;o antecipada deste instrumento antes do t&eacute;rmino do prazo estipulado, ficar&aacute; obrigado a pagar &agrave; CONTRATADA multa contratual equivalente a 50% (cinquenta por cento) do valor total das parcelas mensais restantes para o t&eacute;rmino do prazo contratado.</span></p>`;
       
       const newParagrafoUnico = `<p class="c4"><span class="c20 c1 c2 c6">Par&aacute;grafo &uacute;nico. </span><span class="c1 c6">Ap&oacute;s o t&eacute;rmino do prazo determinado de ${months} (${monthsWords}) meses, o contrato vigorar&aacute; por prazo indeterminado, podendo ser cancelado por qualquer das partes mediante aviso pr&eacute;vio de 30 (trinta) dias.</span></p>`;
 
