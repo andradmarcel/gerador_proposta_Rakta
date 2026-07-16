@@ -497,11 +497,13 @@ function setupEventListeners() {
   document.getElementById("contract-term-input").addEventListener("input", (e) => {
     proposalState.contractTerm = e.target.value || "Aviso prévio de 30 dias";
     updatePreviewDebounced();
+    updateContractPreview();
   });
 
   document.getElementById("payment-terms-input").addEventListener("input", (e) => {
     proposalState.paymentTerms = e.target.value;
     updatePreviewDebounced();
+    updateContractPreview();
   });
 
   document.getElementById("setup-payment-input").addEventListener("input", (e) => {
@@ -764,6 +766,7 @@ function setupEventListeners() {
       if (confirmReset) {
         // Restaura o estado padrão
         proposalState = JSON.parse(JSON.stringify(defaultProposalState));
+        proposalState.contractClauses = { ...defaultClauses };
 
         // Remove do LocalStorage
         localStorage.removeItem("rakta_proposal_state");
@@ -2261,7 +2264,7 @@ async function optimizeContractClause() {
 
     if (!isGuideline) {
       // É uma cláusula contratual (ex: clause3, clause7, etc.)
-      const originalClauseText = proposalState.contractClauses[selectedKey] || defaultClauses[selectedKey];
+      const originalClauseText = (proposalState.contractClauses && proposalState.contractClauses[selectedKey]) || defaultClauses[selectedKey];
       
       promptText = `Você é um advogado especialista em contratos comerciais e marketing digital.
 Sua única tarefa é reescrever a cláusula contratual fornecida abaixo, aplicando estritamente a instrução do usuário.
@@ -2339,6 +2342,9 @@ Regras cruciais:
 
     if (!isGuideline) {
       // Salva a cláusula reescrita
+      if (!proposalState.contractClauses) {
+        proposalState.contractClauses = { ...defaultClauses };
+      }
       proposalState.contractClauses[selectedKey] = text;
     } else {
       const serviceId = selectedKey.replace("guideline_", "");
@@ -2384,14 +2390,16 @@ function resetContractClause() {
   if (confirm("Tem certeza que deseja restaurar o texto padrão da Rakta para este item?")) {
     const isGuideline = selectedKey.startsWith("guideline_");
     if (!isGuideline) {
-      if (proposalState.contractClauses && proposalState.contractClauses[selectedKey] !== undefined) {
-        proposalState.contractClauses[selectedKey] = defaultClauses[selectedKey];
+      if (!proposalState.contractClauses) {
+        proposalState.contractClauses = { ...defaultClauses };
       }
+      proposalState.contractClauses[selectedKey] = defaultClauses[selectedKey];
     } else {
       const serviceId = selectedKey.replace("guideline_", "");
-      if (proposalState.customGuidelines && proposalState.customGuidelines[serviceId] !== undefined) {
-        delete proposalState.customGuidelines[serviceId];
+      if (!proposalState.customGuidelines) {
+        proposalState.customGuidelines = {};
       }
+      delete proposalState.customGuidelines[serviceId];
     }
 
     saveToLocalStorage();
@@ -2759,6 +2767,20 @@ function getContractModules(selectedServices) {
   return result;
 }
 
+function numberToPortugueseWords(num) {
+  const words = {
+    1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
+    6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
+    11: "onze", 12: "doze", 13: "treze", 14: "quatorze", 15: "quinze",
+    16: "dezesseis", 17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte",
+    21: "vinte e um", 22: "vinte e dois", 23: "vinte e três", 24: "vinte e quatro",
+    25: "vinte e cinco", 26: "vinte e seis", 27: "vinte e sete", 28: "vinte e oito",
+    29: "vinte e nove", 30: "trinta", 45: "quarenta e cinco", 60: "sessenta",
+    90: "noventa"
+  };
+  return words[num] || num.toString();
+}
+
 function updateContractPreview() {
   const container = document.getElementById("contract-preview");
   if (!container) return;
@@ -2848,6 +2870,54 @@ function updateContractPreview() {
   }
 
 
+  // Processamento dinâmico das cláusulas para vincular dados da proposta
+  const clausesForRender = JSON.parse(JSON.stringify(proposalState.contractClauses || defaultClauses));
+
+  // 1. Substituição do Prazo Contratual na Cláusula 11
+  const contractTermText = proposalState.contractTerm || "Aviso prévio de 30 dias";
+  const monthsMatch = contractTermText.match(/(\d+)\s*mes/i);
+  const daysMatch = contractTermText.match(/(\d+)\s*dia/i);
+
+  if (clausesForRender.clause11) {
+    if (monthsMatch) {
+      const months = parseInt(monthsMatch[1]);
+      const monthsWords = numberToPortugueseWords(months);
+      
+      const newParagraph11_1 = `<p class="c4"><span class="c1 c6">11.1. O presente contrato ter&aacute; prazo de vig&ecirc;ncia determinado de ${months} (${monthsWords}) meses. Caso o CONTRATANTE opte pela rescis&atilde;o antecipada deste instrumento antes do t&eacute;rmino do prazo estipulado, ficar&aacute; obrigado a pagar &agrave; CONTRATADA multa contratual equivalente ao valor total das parcelas mensais restantes para o t&eacute;rmino do prazo contratado.</span></p>`;
+      
+      const newParagrafoUnico = `<p class="c4"><span class="c20 c1 c2 c6">Par&aacute;grafo &uacute;nico. </span><span class="c1 c6">Ap&oacute;s o t&eacute;rmino do prazo determinado de ${months} (${monthsWords}) meses, o contrato vigorar&aacute; por prazo indeterminado, podendo ser cancelado por qualquer das partes mediante aviso pr&eacute;vio de 30 (trinta) dias.</span></p>`;
+
+      clausesForRender.clause11 = clausesForRender.clause11
+        .replace(/<p[^>]*><span[^>]*>11\.1\..*?<\/p>/gi, newParagraph11_1)
+        .replace(/<p[^>]*><span[^>]*>Par&aacute;grafo &uacute;nico\..*?<\/p>/gi, newParagrafoUnico);
+    } else {
+      const days = daysMatch ? parseInt(daysMatch[1]) : 30;
+      const daysWords = numberToPortugueseWords(days);
+
+      const newParagraph11_1 = `<p class="c4"><span class="c1 c6">11.1. O CONTRATANTE poder&aacute; operar o cancelamento da assinatura, a qualquer tempo, mediante comunica&ccedil;&atilde;o por escrito, via endere&ccedil;o eletr&ocirc;nico (e-mail), &agrave; CONTRATADA. O CONTRATANTE dever&aacute; respeitar o aviso pr&eacute;vio de ${days} (${daysWords}) dias, no qual ter&aacute; a continuidade da presta&ccedil;&atilde;o de servi&ccedil;os e dever&aacute; realizar os devidos pagamentos mensais pelo prazo do aviso.</span></p>`;
+      
+      const newParagrafoUnico = `<p class="c4"><span class="c20 c1 c2 c6">Par&aacute;grafo &uacute;nico. </span><span class="c1 c6">No caso de descumprimento dos prazos acima estabelecidos pelo CONTRATANTE, o valor correspondente ao aviso pr&eacute;vio devido dever&aacute; ser adimplido em car&aacute;ter indenizat&oacute;rio &agrave; CONTRATADA, sem presta&ccedil;&atilde;o de servi&ccedil;os equivalente.</span></p>`;
+
+      clausesForRender.clause11 = clausesForRender.clause11
+        .replace(/<p[^>]*><span[^>]*>11\.1\..*?<\/p>/gi, newParagraph11_1)
+        .replace(/<p[^>]*><span[^>]*>Par&aacute;grafo &uacute;nico\..*?<\/p>/gi, newParagrafoUnico);
+    }
+  }
+
+  // 2. Substituição do Primeiro Pagamento (Regra D+X) na Cláusula 3
+  const paymentTermsText = proposalState.paymentTerms || "";
+  const dMatch = paymentTermsText.match(/D\+(\d+)/i);
+  const firstPaymentDays = dMatch ? parseInt(dMatch[1]) : 7;
+  const firstPaymentDaysWords = numberToPortugueseWords(firstPaymentDays);
+
+  if (clausesForRender.clause3) {
+    clausesForRender.clause3 = clausesForRender.clause3
+      .replace(/Prazo D\+7/gi, `Prazo D+${firstPaymentDays}`)
+      .replace(/at&eacute; 7 \(sete\) dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`)
+      .replace(/at&eacute; \d+ \(.*\) dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`)
+      .replace(/at&eacute; \d+ dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`);
+  }
+
   container.innerHTML = getContractTemplateHTML({
     contractCompany,
     contractCNPJ,
@@ -2863,7 +2933,7 @@ function updateContractPreview() {
     implementacaoParcelas,
     projectStartDate,
     modulesHTML,
-    clauses: proposalState.contractClauses
+    clauses: clausesForRender
   });
 }
 
