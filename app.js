@@ -1224,6 +1224,7 @@ function updatePreview() {
               </ul>
             </div>
             <div class="signatures-block">
+              <div class="signature-box">
                 <div class="sig-line"></div>
                 <span>Pela Rakta Digital</span>
               </div>
@@ -1232,6 +1233,7 @@ function updatePreview() {
                 <span>Para ${proposalState.clientName}</span>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -2494,34 +2496,36 @@ function calculateTotals() {
   projectServices.sort(sortByBonusAndCategory);
   setupServices.sort(sortByBonusAndCategory);
 
-  const autoMonthly = monthlyServices.reduce((sum, s) => sum + (s.isBonus ? 0 : s.price), 0) + setupServices.reduce((sum, s) => sum + (s.isBonus ? 0 : s.recurring), 0);
-  const autoOneOffAndSetup = projectServices.reduce((sum, s) => sum + (s.isBonus ? 0 : s.price), 0) + setupServices.reduce((sum, s) => sum + (s.isBonus ? 0 : s.price), 0);
+  const toCents = (val) => Math.round((val || 0) * 100);
 
-  let baseMonthly = autoMonthly;
+  const autoMonthlyCents = monthlyServices.reduce((sum, s) => sum + (s.isBonus ? 0 : toCents(s.price)), 0) + setupServices.reduce((sum, s) => sum + (s.isBonus ? 0 : toCents(s.recurring)), 0);
+  const autoOneOffAndSetupCents = projectServices.reduce((sum, s) => sum + (s.isBonus ? 0 : toCents(s.price)), 0) + setupServices.reduce((sum, s) => sum + (s.isBonus ? 0 : toCents(s.price)), 0);
+
+  let baseMonthlyCents = autoMonthlyCents;
   if (proposalState.overrideMonthly !== null && proposalState.overrideMonthly !== undefined && !isNaN(proposalState.overrideMonthly)) {
-    baseMonthly = proposalState.overrideMonthly;
+    baseMonthlyCents = toCents(proposalState.overrideMonthly);
   }
-  let totalMonthly = baseMonthly;
+  let totalMonthlyCents = baseMonthlyCents;
   if (proposalState.discountMonthly !== null && proposalState.discountMonthly !== undefined && !isNaN(proposalState.discountMonthly)) {
-    totalMonthly = Math.max(0, baseMonthly - proposalState.discountMonthly);
+    totalMonthlyCents = Math.max(0, baseMonthlyCents - toCents(proposalState.discountMonthly));
   }
 
-  let baseOneOffAndSetup = autoOneOffAndSetup;
+  let baseOneOffAndSetupCents = autoOneOffAndSetupCents;
   if (proposalState.overrideOneOffAndSetup !== null && proposalState.overrideOneOffAndSetup !== undefined && !isNaN(proposalState.overrideOneOffAndSetup)) {
-    baseOneOffAndSetup = proposalState.overrideOneOffAndSetup;
+    baseOneOffAndSetupCents = toCents(proposalState.overrideOneOffAndSetup);
   }
-  let totalOneOffAndSetup = baseOneOffAndSetup;
+  let totalOneOffAndSetupCents = baseOneOffAndSetupCents;
   if (proposalState.discountOneOff !== null && proposalState.discountOneOff !== undefined && !isNaN(proposalState.discountOneOff)) {
-    totalOneOffAndSetup = Math.max(0, baseOneOffAndSetup - proposalState.discountOneOff);
+    totalOneOffAndSetupCents = Math.max(0, baseOneOffAndSetupCents - toCents(proposalState.discountOneOff));
   }
 
   return {
-    autoMonthly,
-    autoOneOffAndSetup,
-    baseMonthly,
-    baseOneOffAndSetup,
-    totalMonthly,
-    totalOneOffAndSetup,
+    autoMonthly: autoMonthlyCents / 100,
+    autoOneOffAndSetup: autoOneOffAndSetupCents / 100,
+    baseMonthly: baseMonthlyCents / 100,
+    baseOneOffAndSetup: baseOneOffAndSetupCents / 100,
+    totalMonthly: totalMonthlyCents / 100,
+    totalOneOffAndSetup: totalOneOffAndSetupCents / 100,
     monthlyServices,
     projectServices,
     setupServices
@@ -2771,17 +2775,38 @@ function getContractModules(selectedServices) {
 }
 
 function numberToPortugueseWords(num) {
-  const words = {
-    1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco",
-    6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
-    11: "onze", 12: "doze", 13: "treze", 14: "quatorze", 15: "quinze",
-    16: "dezesseis", 17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte",
-    21: "vinte e um", 22: "vinte e dois", 23: "vinte e três", 24: "vinte e quatro",
-    25: "vinte e cinco", 26: "vinte e seis", 27: "vinte e sete", 28: "vinte e oito",
-    29: "vinte e nove", 30: "trinta", 45: "quarenta e cinco", 60: "sessenta",
-    90: "noventa"
-  };
-  return words[num] || num.toString();
+  if (num === 0) return "zero";
+  if (num === 100) return "cem";
+
+  const units = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+  const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+  const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+  const hundreds = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+
+  let parts = [];
+
+  // Centenas
+  if (num >= 100) {
+    const h = Math.floor(num / 100);
+    parts.push(hundreds[h]);
+    num %= 100;
+  }
+
+  // Dezenas e Unidades
+  if (num >= 20) {
+    const t = Math.floor(num / 10);
+    parts.push(tens[t]);
+    num %= 10;
+    if (num > 0) {
+      parts.push(units[num]);
+    }
+  } else if (num >= 10) {
+    parts.push(teens[num - 10]);
+  } else if (num > 0) {
+    parts.push(units[num]);
+  }
+
+  return parts.filter(Boolean).join(" e ");
 }
 
 function updateContractPreview() {
@@ -2884,6 +2909,7 @@ function updateContractPreview() {
   const daysMatch = contractTermText.match(/(\d+)\s*dia/i);
 
   if (clausesForRender.clause11) {
+    let replacementHTML = "";
     if (monthsMatch) {
       const months = parseInt(monthsMatch[1]);
       const monthsWords = numberToPortugueseWords(months);
@@ -2892,9 +2918,7 @@ function updateContractPreview() {
       
       const newParagrafoUnico = `<p class="c4"><span class="c20 c1 c2 c6">Par&aacute;grafo &uacute;nico. </span><span class="c1 c6">Ap&oacute;s o t&eacute;rmino do prazo determinado de ${months} (${monthsWords}) meses, o contrato vigorar&aacute; por prazo indeterminado, podendo ser cancelado por qualquer das partes mediante aviso pr&eacute;vio de 30 (trinta) dias.</span></p>`;
 
-      clausesForRender.clause11 = clausesForRender.clause11
-        .replace(/<p[^>]*><span[^>]*>11\.1\..*?<\/p>/gi, newParagraph11_1)
-        .replace(/<p[^>]*><span[^>]*>Par&aacute;grafo &uacute;nico\..*?<\/p>/gi, newParagrafoUnico);
+      replacementHTML = `${newParagraph11_1}\n               ${newParagrafoUnico}`;
     } else {
       const days = daysMatch ? parseInt(daysMatch[1]) : 30;
       const daysWords = numberToPortugueseWords(days);
@@ -2903,10 +2927,13 @@ function updateContractPreview() {
       
       const newParagrafoUnico = `<p class="c4"><span class="c20 c1 c2 c6">Par&aacute;grafo &uacute;nico. </span><span class="c1 c6">No caso de descumprimento dos prazos acima estabelecidos pelo CONTRATANTE, o valor correspondente ao aviso pr&eacute;vio devido dever&aacute; ser adimplido em car&aacute;ter indenizat&oacute;rio &agrave; CONTRATADA, sem presta&ccedil;&atilde;o de servi&ccedil;os equivalente.</span></p>`;
 
-      clausesForRender.clause11 = clausesForRender.clause11
-        .replace(/<p[^>]*><span[^>]*>11\.1\..*?<\/p>/gi, newParagraph11_1)
-        .replace(/<p[^>]*><span[^>]*>Par&aacute;grafo &uacute;nico\..*?<\/p>/gi, newParagrafoUnico);
+      replacementHTML = `${newParagraph11_1}\n               ${newParagrafoUnico}`;
     }
+
+    clausesForRender.clause11 = clausesForRender.clause11.replace(
+      /<!-- START_CLAUSE_11_VIGENCIA -->[\s\S]*?<!-- END_CLAUSE_11_VIGENCIA -->/g,
+      `<!-- START_CLAUSE_11_VIGENCIA -->\n               ${replacementHTML}\n               <!-- END_CLAUSE_11_VIGENCIA -->`
+    );
   }
 
   // 2. Substituição do Primeiro Pagamento (Regra D+X) na Cláusula 3
@@ -2916,25 +2943,31 @@ function updateContractPreview() {
   const firstPaymentDaysWords = numberToPortugueseWords(firstPaymentDays);
 
   if (clausesForRender.clause3) {
-    clausesForRender.clause3 = clausesForRender.clause3
-      .replace(/Prazo D\+7/gi, `Prazo D+${firstPaymentDays}`)
-      .replace(/at&eacute; 7 \(sete\) dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`)
-      .replace(/at&eacute; \d+ \(.*\) dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`)
-      .replace(/at&eacute; \d+ dias/gi, `at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias`);
-
+    let cl3_servicos_texto = "valor de implementa&ccedil;&atilde;o e execu&ccedil;&atilde;o da Byline";
+    let cl3_intro = ", correspondente ao fee mensal e ao valor da implementa&ccedil;&atilde;o pontual (ou &agrave; sua primeira parcela, caso tenha sido parcelada),";
+    
     if (hasRecurrencia && !hasImplementacao) {
-      clausesForRender.clause3 = clausesForRender.clause3
-        .replace(/implementa&ccedil;&atilde;o e execu&ccedil;&atilde;o/g, "execu&ccedil;&atilde;o")
-        .replace(/ e ao valor da implementa&ccedil;&atilde;o pontual \(ou &agrave; sua primeira parcela, caso tenha sido parcelada\)/g, "");
+      cl3_servicos_texto = "valor de execu&ccedil;&atilde;o da Byline";
+      cl3_intro = ", correspondente ao fee mensal,";
     } else if (!hasRecurrencia && hasImplementacao) {
-      clausesForRender.clause3 = clausesForRender.clause3
-        .replace(/implementa&ccedil;&atilde;o e execu&ccedil;&atilde;o/g, "implementa&ccedil;&atilde;o")
-        .replace(/fee mensal e ao /g, "");
+      cl3_servicos_texto = "valor de implementa&ccedil;&atilde;o da Byline";
+      cl3_intro = ", correspondente ao valor da implementa&ccedil;&atilde;o pontual (ou &agrave; sua primeira parcela, caso tenha sido parcelada),";
     } else if (!hasRecurrencia && !hasImplementacao) {
-      clausesForRender.clause3 = clausesForRender.clause3
-        .replace(/o valor de implementa&ccedil;&atilde;o e execu&ccedil;&atilde;o da Byline/g, "os valores acordados da Byline")
-        .replace(/, correspondente ao fee mensal e ao valor da implementa&ccedil;&atilde;o pontual \(ou &agrave; sua primeira parcela, caso tenha sido parcelada\),/g, "");
+      cl3_servicos_texto = "os valores acordados da Byline";
+      cl3_intro = "";
     }
+
+    const paragraph3_5 = `<p class="c4"><span class="c7 c1 c6">3.5. Regra de Primeiro Pagamento (Prazo D+${firstPaymentDays}): O primeiro pagamento deste contrato${cl3_intro} dever&aacute; ser quitado pela CONTRATANTE no prazo improrrog&aacute;vel de at&eacute; ${firstPaymentDays} (${firstPaymentDaysWords}) dias corridos, contados a partir da data de assinatura deste instrumento, seguindo os pagamentos subsequentes &agrave;s datas padr&atilde;o estipuladas nas tabelas iniciais.</span></p>`;
+
+    clausesForRender.clause3 = clausesForRender.clause3
+      .replace(
+        /<!-- START_CL3_SERVICOS_TEXTO -->[\s\S]*?<!-- END_CL3_SERVICOS_TEXTO -->/g,
+        `<!-- START_CL3_SERVICOS_TEXTO -->${cl3_servicos_texto}<!-- END_CL3_SERVICOS_TEXTO -->`
+      )
+      .replace(
+        /<!-- START_CL3_REGRA_PAGAMENTO -->[\s\S]*?<!-- END_CL3_REGRA_PAGAMENTO -->/g,
+        `<!-- START_CL3_REGRA_PAGAMENTO -->\n               ${paragraph3_5}\n               <!-- END_CL3_REGRA_PAGAMENTO -->`
+      );
   }
 
   container.innerHTML = getContractTemplateHTML({
