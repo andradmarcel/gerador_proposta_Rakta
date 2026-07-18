@@ -62,14 +62,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Set default contract start date to today if empty
   if (!proposalState.contractStartDate) {
-    const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     proposalState.contractStartDate = today;
     const dateInput = document.getElementById("contract-start-date-input");
     if (dateInput) dateInput.value = today;
   }
 
+  // Delegar eventos do accordion de serviços
+  const servicesAccordion = document.getElementById("services-accordion");
+  if (servicesAccordion) {
+    // Seleção de serviço (change event)
+    servicesAccordion.addEventListener("change", (e) => {
+      if (e.target && e.target.classList.contains("add-service-select")) {
+        const serviceId = e.target.value;
+        const catId = e.target.dataset.cat;
+        if (serviceId) {
+          addService(catId, serviceId);
+          e.target.value = ""; // Reseta o select
+        }
+      }
+    });
+
+    // Clique no cabeçalho do accordion
+    servicesAccordion.addEventListener("click", (e) => {
+      const header = e.target.closest(".accordion-header");
+      if (header && servicesAccordion.contains(header)) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector(".accordion-icon");
+        if (content && icon) {
+          content.classList.toggle("hidden");
+          icon.classList.toggle("rotate-180");
+        }
+      }
+    });
+  }
+
   // Se não houver estado salvo, executa o sincronismo de nicho inicial padrão
-  if (!localStorage.getItem("rakta_proposal_state")) {
+  if (!sessionStorage.getItem("rakta_proposal_state")) {
     syncNicheFields();
   } else {
     syncFieldsFromState();
@@ -167,29 +197,6 @@ function renderServicesSelector() {
       updateDropdownOptions(groupId, catId);
     }
   }
-
-  // Configura listeners para todos os selects criados
-  container.querySelectorAll(".add-service-select").forEach(select => {
-    select.addEventListener("change", (e) => {
-      const serviceId = e.target.value;
-      const catId = e.target.dataset.cat;
-
-      if (serviceId) {
-        addService(catId, serviceId);
-        e.target.value = ""; // Reseta o select
-      }
-    });
-  });
-
-  // Lógica de toggle do Accordion
-  document.querySelectorAll(".accordion-header").forEach(header => {
-    header.addEventListener("click", () => {
-      const content = header.nextElementSibling;
-      const icon = header.querySelector(".accordion-icon");
-      content.classList.toggle("hidden");
-      icon.classList.toggle("rotate-180");
-    });
-  });
 }
 
 // Popula o dropdown de serviços ocultando os já adicionados
@@ -251,7 +258,7 @@ function addService(catId, serviceId) {
     isBonus: false
   });
 
-  saveToLocalStorage();
+  saveToSessionStorage();
   renderActiveServices();
   updatePreview();
 }
@@ -385,7 +392,7 @@ function renderServiceCard(svc) {
       recInput.value = selectedLevel.recurring !== undefined ? selectedLevel.recurring : 0;
     }
 
-    saveToLocalStorage();
+    saveToSessionStorage();
     updatePreview();
   });
 
@@ -395,7 +402,7 @@ function renderServiceCard(svc) {
     if (stateSvc) {
       stateSvc.price = parseFloat(e.target.value) || 0;
     }
-    saveToLocalStorage();
+    saveToSessionStorage();
     updatePreviewDebounced();
   });
 
@@ -404,7 +411,7 @@ function renderServiceCard(svc) {
     if (stateSvc) {
       stateSvc.description = e.target.value;
     }
-    saveToLocalStorage();
+    saveToSessionStorage();
     updatePreviewDebounced();
   });
 
@@ -414,7 +421,7 @@ function renderServiceCard(svc) {
       if (stateSvc) {
         stateSvc.recurring = parseFloat(e.target.value) || 0;
       }
-      saveToLocalStorage();
+      saveToSessionStorage();
       updatePreviewDebounced();
     });
   }
@@ -425,7 +432,7 @@ function renderServiceCard(svc) {
       if (stateSvc) {
         stateSvc.isBonus = e.target.checked;
       }
-      saveToLocalStorage();
+      saveToSessionStorage();
       updatePreview();
     });
   }
@@ -433,7 +440,7 @@ function renderServiceCard(svc) {
   // Listener para o botão de remoção
   btnRemove.addEventListener("click", () => {
     proposalState.selectedServices = proposalState.selectedServices.filter(s => s.serviceId !== serviceId);
-    saveToLocalStorage();
+    saveToSessionStorage();
     renderActiveServices();
     updatePreview();
   });
@@ -499,19 +506,18 @@ function setupEventListeners() {
     if (el) {
       el.addEventListener("input", (e) => {
         proposalState[prop] = isNumber ? (parseFloat(e.target.value) || 0) : e.target.value;
-        saveToLocalStorage();
+        saveToSessionStorage();
         updateContractPreview();
       });
       el.addEventListener("change", (e) => {
         proposalState[prop] = isNumber ? (parseFloat(e.target.value) || 0) : e.target.value;
-        saveToLocalStorage();
+        saveToSessionStorage();
         updateContractPreview();
       });
     }
   };
 
   addContractListener("contract-company-input", "contractCompany");
-  addContractListener("contract-cnpj-input", "contractCNPJ");
   addContractListener("contract-phone-input", "contractPhone");
   addContractListener("contract-address-input", "contractAddress");
   addContractListener("contract-rep-name-input", "contractRepName");
@@ -526,21 +532,13 @@ function setupEventListeners() {
   const cnpjInput = document.getElementById("contract-cnpj-input");
   if (cnpjInput) {
     cnpjInput.addEventListener("input", (e) => {
-      let value = e.target.value.replace(/\D/g, "");
-      if (value.length > 14) value = value.substring(0, 14);
-
-      if (value.length > 12) {
-        value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-      } else if (value.length > 8) {
-        value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/, "$1.$2.$3/$4");
-      } else if (value.length > 5) {
-        value = value.replace(/^(\d{2})(\d{3})(\d{1,3})/, "$1.$2.$3");
-      } else if (value.length > 2) {
-        value = value.replace(/^(\d{2})(\d{1,3})/, "$1.$2");
-      }
-      e.target.value = value;
-      proposalState.contractCNPJ = value;
-      saveToLocalStorage();
+      let rawVal = e.target.value.replace(/\D/g, "");
+      if (rawVal.length > 14) rawVal = rawVal.substring(0, 14);
+      
+      e.target.value = formatCNPJ(rawVal);
+      proposalState.contractCNPJ = rawVal;
+      saveToSessionStorage();
+      updateContractPreview();
     });
   }
 
@@ -871,7 +869,7 @@ function setupEventListeners() {
         proposalState.contractClauses = { ...defaultClauses };
 
         // Remove do LocalStorage
-        localStorage.removeItem("rakta_proposal_state");
+        sessionStorage.removeItem("rakta_proposal_state");
 
         // Limpa serviços customizados em servicesData
         for (const categoryId in servicesData) {
@@ -1326,7 +1324,7 @@ function updatePreview() {
   setTimeout(updateSlideScale, 50);
 
   // Auto-salva o estado no LocalStorage
-  saveToLocalStorage();
+  saveToSessionStorage();
 
   // Se o modo de apresentação estiver ativo, garante que apenas o slide atual fique visível
   const btnModePres = document.getElementById("btn-mode-presentation");
@@ -1403,6 +1401,21 @@ function formatCurrency(val) {
     currency: "BRL",
     maximumFractionDigits: 0
   }).format(val);
+}
+
+function formatCNPJ(value) {
+  let clean = (value || "").replace(/\D/g, "");
+  if (clean.length > 14) clean = clean.substring(0, 14);
+  if (clean.length > 12) {
+    return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  } else if (clean.length > 8) {
+    return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/, "$1.$2.$3/$4");
+  } else if (clean.length > 5) {
+    return clean.replace(/^(\d{2})(\d{3})(\d{1,3})/, "$1.$2.$3");
+  } else if (clean.length > 2) {
+    return clean.replace(/^(\d{2})(\d{1,3})/, "$1.$2");
+  }
+  return clean;
 }
 
 function getValidityDateString(days) {
@@ -1542,175 +1555,27 @@ async function generatePDF() {
       const origCoverCard = slide.querySelector(".cover-card");
       const coverCardHeight = origCoverCard ? origCoverCard.offsetHeight : 230;
 
-      // html2canvas NÃO suporta backdrop-filter — substitui por backgrounds OPACOS
-      // e aplica TODOS os estilos inline diretamente para garantir renderização
-      const backdropFixes = [
-        {
-          sel: ".cover-card",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#070709",
-            backgroundColor: "#070709",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: "12px",
-            position: "absolute",
-            top: `${540 - 50 - coverCardHeight}px`,
-            left: `${960 - 50 - 420}px`,
-            width: "420px",
-            padding: "30px",
-            boxShadow: "none",
-            zIndex: "10",
-            animation: "none",
-            transition: "none",
-            opacity: "1"
-          }
-        },
-        {
-          sel: ".problem-overlay-left",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#030305",
-            backgroundColor: "#030305",
-            boxShadow: "none",
-            position: "absolute",
-            top: "100px",
-            left: "50px",
-            width: "330px",
-            padding: "24px",
-            borderLeft: "4px solid #e30613",
-            borderRadius: "0 12px 12px 0"
-          }
-        },
-        {
-          sel: ".problem-overlay-right",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#030305",
-            backgroundColor: "#030305",
-            boxShadow: "none",
-            position: "absolute",
-            top: "100px",
-            right: "50px",
-            width: "330px",
-            padding: "24px",
-            borderLeft: "4px solid #e30613",
-            borderRadius: "0 12px 12px 0"
-          }
-        },
-        {
-          sel: ".contact-box-overlay",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#070709",
-            backgroundColor: "#070709",
-            boxShadow: "none",
-            border: "1px solid rgba(255,255,255,0.08)"
-          }
-        },
-        {
-          sel: ".conditions-card",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#0a0a0e",
-            backgroundColor: "#0a0a0e",
-            boxShadow: "none"
-          }
-        },
-        {
-          sel: ".service-preview-card:not(.service-preview-card-bonus)",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#0a0a0e",
-            backgroundColor: "#0a0a0e",
-            boxShadow: "none"
-          }
-        },
-        {
-          sel: ".service-preview-card-bonus",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#0a0a0e",
-            backgroundColor: "#0a0a0e",
-            border: "1px solid rgba(21, 128, 61, 0.5)",
-            borderColor: "rgba(21, 128, 61, 0.5)",
-            boxShadow: "none"
-          }
-        },
-        {
-          sel: ".total-card",
-          styles: {
-            backdropFilter: "none",
-            webkitBackdropFilter: "none",
-            background: "#1e0204",
-            backgroundColor: "#1e0204",
-            boxShadow: "none"
-          }
-        },
-        {
-          sel: ".table-card",
-          styles: {
-            maxHeight: "none",
-            overflow: "visible",
-            overflowY: "visible"
-          }
-        },
-      ];
+      // Adiciona classe para forçar estilos específicos de impressão (como fundos opacos e fontes)
+      renderEl.classList.add("print-pdf-mode");
 
-      backdropFixes.forEach(({ sel, styles }) => {
-        renderEl.querySelectorAll(sel).forEach(el => {
-          Object.assign(el.style, styles);
-        });
-      });
-      // Força estilos de texto nos elementos do cover-card para html2canvas
-      renderEl.querySelectorAll(".cover-tag").forEach(el => {
-        el.style.fontFamily = "Arial, sans-serif";
-        el.style.fontSize = "10px";
-        el.style.fontWeight = "700";
-        el.style.letterSpacing = "0.4em";
-        el.style.color = "#e30613";
-        el.style.marginBottom = "12px";
-        el.style.textTransform = "uppercase";
-      });
+      // html2canvas NÃO suporta absolute position com bottom — aplica top/left dinâmicos
+      const coverCard = renderEl.querySelector(".cover-card");
+      if (coverCard) {
+        coverCard.style.top = `${540 - 50 - coverCardHeight}px`;
+        coverCard.style.left = `${960 - 50 - 420}px`;
+      }
+
+      // Ajusta dinamicamente o tamanho da fonte do cliente baseado na extensão do texto
       renderEl.querySelectorAll(".cover-client").forEach(el => {
-        el.style.fontFamily = "Arial, sans-serif";
         el.style.fontSize = el.innerText.length > 20 ? "24px" : "32px";
-        el.style.fontWeight = "700";
-        el.style.lineHeight = "1.15";
-        el.style.color = "#ffffff";
-        el.style.marginBottom = "10px";
-        el.style.wordBreak = "break-word";
-      });
-      renderEl.querySelectorAll(".cover-project").forEach(el => {
-        el.style.fontFamily = "Arial, sans-serif";
-        el.style.fontSize = "14px";
-        el.style.color = "#a1a1aa";
-        el.style.fontWeight = "300";
-        el.style.marginBottom = "24px";
-        el.style.borderLeft = "2px solid #e30613";
-        el.style.paddingLeft = "12px";
-      });
-      renderEl.querySelectorAll(".cover-footer").forEach(el => {
-        el.style.fontFamily = "Arial, sans-serif";
-        el.style.borderTop = "1px solid rgba(255,255,255,0.08)";
-        el.style.paddingTop = "16px";
-        el.style.display = "flex";
-        el.style.justifyContent = "space-between";
-        el.style.fontSize = "10px";
-        el.style.color = "#a1a1aa";
-      });
-      renderEl.querySelectorAll(".cover-footer strong").forEach(el => {
-        el.style.color = "#ffffff";
       });
 
       offscreen.innerHTML = "";
       offscreen.appendChild(renderEl);
+
+      // Aguarda o processamento de layout do navegador e garante que as fontes inlined estejam totalmente mapeadas
+      await document.fonts.ready;
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Captura com html2canvas em resolução de altíssima qualidade (scale 1.5)
       const canvas = await html2canvas(renderEl, {
@@ -1757,31 +1622,19 @@ function parseDescriptionToBullets(descText) {
   if (Array.isArray(descText)) return descText;
 
   let text = descText.trim();
-
-  // Verifica se há quebras de linha
   let lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   let parts = [];
 
-  if (lines.length > 1) {
-    // Possui quebras de linha, tratar cada linha como um bullet
-    lines.forEach(line => {
-      // Remove marcadores comuns de lista no início da linha (ex: -, *, •, 1., a))
-      let cleaned = line
-        .replace(/^[-\*\u2022\u25E6\u2023\u2043\u25CB\u25CF\u25A0\u25A1]\s*/, "")
-        .replace(/^\d+[\.\)]\s*/, "")
-        .trim();
-      if (cleaned.length > 0) {
-        parts.push(cleaned);
-      }
-    });
-  } else {
-    // Sem quebras de linha, divide por ponto e vírgula se houver, ou por vírgula normal
-    if (text.includes(';')) {
-      parts = text.split(/;(?![^(]*\))/).map(p => p.trim()).filter(p => p.length > 0);
-    } else {
-      parts = text.split(/,(?![^(]*\))/).map(p => p.trim()).filter(p => p.length > 0);
+  lines.forEach(line => {
+    // Remove marcadores comuns de lista no início da linha (ex: -, *, •, 1., a))
+    let cleaned = line
+      .replace(/^[-\*\u2022\u25E6\u2023\u2043\u25CB\u25CF\u25A0\u25A1]\s*/, "")
+      .replace(/^\d+[\.\)]\s*/, "")
+      .trim();
+    if (cleaned.length > 0) {
+      parts.push(cleaned);
     }
-  }
+  });
 
   return parts
     .map(p => p.trim())
@@ -1820,6 +1673,26 @@ function loadGeminiApiKey() {
   if (savedKey) {
     const keyInput = document.getElementById("gemini-api-key");
     if (keyInput) keyInput.value = savedKey;
+  }
+}
+
+// Função auxiliar para fazer fetch com Timeout (padrão de 15 segundos)
+async function fetchWithTimeout(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error("A requisição expirou (timeout de 15 segundos). Verifique sua conexão e tente novamente.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(id);
   }
 }
 
@@ -1882,9 +1755,9 @@ Regras estritas para a Estratégia Recomendada:
 - A estratégia deve ser estruturada em 3 ou 4 frases curtas e objetivas, onde cada frase descreve uma ação prática focada no escopo contratado. Separe cada frase com um ponto final (ex: "Frase curta 1. Frase curta 2. Frase curta 3.").
 
 Regras estritas para o escopo de entregas ("description"):
-- O escopo deve ser escrito como uma lista de 4 a 6 itens (entregáveis) separados por vírgula.
+- O escopo deve ser escrito como uma lista de 4 a 6 itens (entregáveis) separados por quebras de linha (\n), com um item por linha.
+- NUNCA use marcadores de lista no início de cada linha (como hífens, asteriscos ou números).
 - Cada item deve ser detalhado, profissional e persuasivo para demonstrar alto valor e convencer o cliente (ex: em vez de apenas "Gestão de 2 plataformas", use "Gestão estratégica de anúncios em até 2 plataformas focada em escala de leads"; em vez de "relatório mensal", use "Envio de relatório mensal de performance com análise de métricas chaves e próximos passos").
-- NUNCA use vírgulas internas dentro de um mesmo item (ex: use "8 posts mensais com foco em desejo e conversão", e NUNCA "8 posts mensais com foco em desejo, conversão"). Use conectores como "e", "com", "focado em" em vez de vírgulas dentro do mesmo item.
 - Mantenha os limites numéricos originais estritamente iguais (por exemplo, se o texto original menciona "2 plataformas" ou "12 posts por mês" ou "2 reuniões por mês", mantenha esses números exatos).
 
 Aqui estão os serviços a serem otimizados:
@@ -1895,7 +1768,7 @@ Retorne a resposta EXATAMENTE no formato JSON abaixo, sem blocos de código mark
   "optimizedServices": [
     {
       "id": "id_do_servico",
-      "description": "Lista de 4 a 6 itens detalhados de entrega separados apenas por vírgula (sem vírgulas internas dentro de cada item)."
+      "description": "Lista de 4 a 6 itens detalhados de entrega separados por quebras de linha (\\n), sem marcadores."
     }
   ],
   "strategy": "Frase curta 1. Frase curta 2. Frase curta 3."
@@ -1904,7 +1777,7 @@ Retorne a resposta EXATAMENTE no formato JSON abaixo, sem blocos de código mark
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1916,7 +1789,7 @@ Retorne a resposta EXATAMENTE no formato JSON abaixo, sem blocos de código mark
           }]
         }]
       })
-    });
+    }, 15000);
 
     if (!response.ok) {
       const errData = await response.json();
@@ -1961,7 +1834,7 @@ Retorne a resposta EXATAMENTE no formato JSON abaixo, sem blocos de código mark
       }
     }
 
-    saveToLocalStorage();
+    saveToSessionStorage();
     updatePreview();
 
     // Feedback de sucesso rápido
@@ -1984,11 +1857,11 @@ Retorne a resposta EXATAMENTE no formato JSON abaixo, sem blocos de código mark
 // ============================================================
 
 let _autoSaveTimeout = null;
-function saveToLocalStorage() {
+function saveToSessionStorage() {
   clearTimeout(_autoSaveTimeout);
   _autoSaveTimeout = setTimeout(() => {
     try {
-      localStorage.setItem("rakta_proposal_state", JSON.stringify(proposalState));
+      sessionStorage.setItem("rakta_proposal_state", JSON.stringify(proposalState));
       const indicator = document.getElementById("autosave-indicator");
       if (indicator) {
         indicator.style.display = "block";
@@ -1996,7 +1869,7 @@ function saveToLocalStorage() {
         indicator._hideTimer = setTimeout(() => { indicator.style.display = "none"; }, 3000);
       }
     } catch (e) {
-      console.warn("Erro ao salvar no localStorage:", e);
+      console.warn("Erro ao salvar no sessionStorage:", e);
     }
   }, 500);
 }
@@ -2010,7 +1883,7 @@ function loadSavedState() {
   });
 
   // Carrega estado salvo
-  const savedStateStr = localStorage.getItem("rakta_proposal_state");
+  const savedStateStr = sessionStorage.getItem("rakta_proposal_state");
   if (savedStateStr) {
     try {
       const saved = JSON.parse(savedStateStr);
@@ -2084,7 +1957,7 @@ function syncFieldsFromState() {
 
   // Sincroniza campos do contrato
   if (el("contract-company-input")) el("contract-company-input").value = proposalState.contractCompany || "";
-  if (el("contract-cnpj-input")) el("contract-cnpj-input").value = proposalState.contractCNPJ || "";
+  if (el("contract-cnpj-input")) el("contract-cnpj-input").value = formatCNPJ(proposalState.contractCNPJ || "");
   if (el("contract-phone-input")) el("contract-phone-input").value = proposalState.contractPhone || "";
   if (el("contract-address-input")) el("contract-address-input").value = proposalState.contractAddress || "";
   if (el("contract-rep-name-input")) el("contract-rep-name-input").value = proposalState.contractRepName || "";
@@ -2215,20 +2088,20 @@ Reescreva o escopo de entregas abaixo do serviço "${serviceName}" para o client
 Escopo atual: "${currentDesc}"
 
 Regras:
-- Retorne uma lista de 4 a 6 entregáveis separados por vírgula.
+- Retorne uma lista de 4 a 6 entregáveis separados por quebras de linha (\n), com um item por linha.
 - Cada item deve ser detalhado, profissional e demonstrar alto valor.
-- NUNCA use vírgulas dentro de um mesmo item. Use "e", "com", "focado em" como conectores.
+- NUNCA use marcadores (como hífens, números ou asteriscos) no início de cada linha.
 - Mantenha os limites numéricos originais (plataformas, posts por mês, etc).
 
-Retorne SOMENTE a string dos entregáveis, sem JSON, sem listas com hífens, sem markdown.`;
+Retorne SOMENTE a string dos entregáveis separados por quebra de linha, sem JSON, sem listas com hífens ou números, sem markdown.`;
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
+    }, 15000);
 
     if (!response.ok) {
       const errData = await response.json();
@@ -2245,7 +2118,7 @@ Retorne SOMENTE a string dos entregáveis, sem JSON, sem listas com hífens, sem
       if (stateSvc) {
         stateSvc.description = text;
       }
-      saveToLocalStorage();
+      saveToSessionStorage();
       updatePreview();
     }
 
@@ -2355,11 +2228,11 @@ Regras cruciais:
     }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-    });
+    }, 15000);
 
     if (!response.ok) {
       const errData = await response.json();
@@ -2394,7 +2267,7 @@ Regras cruciais:
       proposalState.customGuidelines[serviceId] = lines;
     }
 
-    saveToLocalStorage();
+    saveToSessionStorage();
     updateContractPreview();
     promptInput.value = ""; // Limpa prompt após sucesso
 
@@ -2434,7 +2307,7 @@ function resetContractClause() {
       delete proposalState.customGuidelines[serviceId];
     }
 
-    saveToLocalStorage();
+    saveToSessionStorage();
     updateContractPreview();
 
     const btnReset = document.getElementById("btn-reset-clause");
@@ -2866,7 +2739,7 @@ function updateContractPreview() {
 
   const clientName = proposalState.clientName || "________________________";
   const contractCompany = proposalState.contractCompany || clientName;
-  const contractCNPJ = proposalState.contractCNPJ || "________________________";
+  const contractCNPJ = proposalState.contractCNPJ ? formatCNPJ(proposalState.contractCNPJ) : "________________________";
   const contractPhone = proposalState.contractPhone || "________________________";
   const contractAddress = proposalState.contractAddress || "________________________";
   const contractRepName = proposalState.contractRepName || "________________________";
