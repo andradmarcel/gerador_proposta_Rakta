@@ -1280,37 +1280,107 @@ function updatePreview() {
   if (proposalState.includeSlides.problem) {
     const slide = createSlideElement("assets/Modelo Rakta - Proposta Comercial (1).webp");
 
-    let painHTML = "";
-    proposalState.customPainPoints.forEach(point => {
-      painHTML += `<li style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #a1a1aa; margin-bottom: 10px; display: flex; gap: 8px; align-items: flex-start;"><span class="bullet-red" style="color: #e30613; font-size: 14px; line-height: 1;">•</span> ${point}</li>`;
-    });
-
-    let strategyHTML = "";
-    const strategySentences = proposalState.customStrategy
+    const painPoints = proposalState.customPainPoints || [];
+    const strategySentences = (proposalState.customStrategy || "")
       .split('.')
       .map(s => s.trim())
       .filter(s => s.length > 0);
 
+    // Função de ajuste dinâmico contínuo de fonte e espaçamentos (sem scroll, encaixe total)
+    const computeCardTypography = (items, isRightCard = false) => {
+      if (!items || items.length === 0) {
+        return {
+          fontSize: "13px",
+          lineHeight: "1.45",
+          marginBottom: "12px",
+          bulletSize: "14px",
+          titleMarginBottom: "14px",
+          cardPadding: "18px 20px"
+        };
+      }
+
+      const itemCount = items.length;
+      // Altura disponível real para a lista dentro do card de 395px
+      const targetListHeight = isRightCard ? 285 : 330;
+
+      let bestF = 7.0;
+      let bestGap = 5;
+      let bestLineHeight = 1.35;
+
+      // Iterativamente encontra a MAIOR fonte em [6.5px, 14.5px] que caiba 100% no card
+      for (let F = 14.5; F >= 6.5; F -= 0.1) {
+        const charsPerLine = Math.max(16, Math.floor(305 / (F * 0.47)));
+        let totalLines = 0;
+        items.forEach(item => {
+          totalLines += Math.max(1, Math.ceil(item.length / charsPerLine));
+        });
+
+        const lh = F * 1.35;
+        const textHeight = totalLines * lh;
+        const minGap = 3;
+        const minNeeded = textHeight + Math.max(0, itemCount - 1) * minGap;
+
+        if (minNeeded <= targetListHeight) {
+          bestF = F;
+          bestLineHeight = lh;
+          // Distribui a sobra vertical entre os itens para que a lista chegue até o final do card!
+          const remaining = targetListHeight - textHeight;
+          const calcGap = itemCount > 1 ? remaining / itemCount : 12;
+          bestGap = Math.min(16, Math.max(4, calcGap));
+          break;
+        }
+      }
+
+      const fontSizeVal = Math.round(bestF * 10) / 10;
+      const lineHeightVal = Math.round(bestLineHeight * 10) / 10;
+      const marginBottomVal = Math.round(bestGap * 10) / 10;
+      const bulletSizeVal = Math.round((fontSizeVal * 1.1) * 10) / 10;
+      const titleMarginVal = Math.min(14, Math.max(5, Math.round(fontSizeVal * 0.75 * 10) / 10));
+      const paddingV = Math.min(18, Math.max(12, Math.round(fontSizeVal * 1.25 * 10) / 10));
+
+      return {
+        fontSize: `${fontSizeVal}px`,
+        lineHeight: `${lineHeightVal}px`,
+        marginBottom: `${marginBottomVal}px`,
+        bulletSize: `${bulletSizeVal}px`,
+        titleMarginBottom: `${titleMarginVal}px`,
+        cardPadding: `${paddingV}px 18px`
+      };
+    };
+
+    const leftTypo = computeCardTypography(painPoints, false);
+    const rightTypo = computeCardTypography(strategySentences, true);
+
+    let painHTML = "";
+    painPoints.forEach(point => {
+      painHTML += `<li style="font-family: Arial, sans-serif; font-size: ${leftTypo.fontSize}; line-height: ${leftTypo.lineHeight}; color: #a1a1aa; margin-bottom: ${leftTypo.marginBottom}; display: flex; gap: 8px; align-items: flex-start;"><span class="bullet-red" style="color: #e30613; font-size: ${leftTypo.bulletSize}; line-height: 1;">•</span> ${point}</li>`;
+    });
+
+    let strategyHTML = "";
     strategySentences.forEach(sentence => {
-      strategyHTML += `<li style="font-family: Arial, sans-serif; font-size: 12px; line-height: 1.5; color: #a1a1aa; margin-bottom: 10px; display: flex; gap: 8px; align-items: flex-start;"><span class="bullet-red" style="color: #e30613; font-size: 14px; line-height: 1;">•</span> ${sentence}</li>`;
+      strategyHTML += `<li style="font-family: Arial, sans-serif; font-size: ${rightTypo.fontSize}; line-height: ${rightTypo.lineHeight}; color: #a1a1aa; margin-bottom: ${rightTypo.marginBottom}; display: flex; gap: 8px; align-items: flex-start;"><span class="bullet-red" style="color: #e30613; font-size: ${rightTypo.bulletSize}; line-height: 1;">•</span> ${sentence}</li>`;
     });
 
     slide.innerHTML += `
-      <div class="problem-overlay-left" style="position: absolute; top: 100px; left: 50px; width: 330px; padding: 24px; background: rgba(5,5,7,0.90); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 4px solid #e30613; border-radius: 0 12px 12px 0; box-shadow: 0 20px 40px rgba(0,0,0,0.6); z-index: 10;">
-        <div class="overlay-tag" style="font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.3em; color: #e30613; margin-bottom: 6px;">DIAGNÓSTICO ESTRATÉGICO</div>
-        <div class="overlay-title" style="font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 18px; text-transform: uppercase;">DORES DO CLIENTE</div>
-        <ul class="pain-points-list" style="list-style: none; margin-top: 10px; padding-left: 0;">
-          ${painHTML}
-        </ul>
+      <div class="problem-overlay-left" style="position: absolute; top: 112px; left: 30px; width: 350px; height: 395px; box-sizing: border-box; padding: ${leftTypo.cardPadding}; background: rgba(5,5,7,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 4px solid #e30613; border-radius: 0 12px 12px 0; box-shadow: 0 20px 40px rgba(0,0,0,0.6); z-index: 10; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
+        <div>
+          <div class="overlay-tag" style="font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.3em; color: #e30613; margin-bottom: 2px;">DIAGNÓSTICO ESTRATÉGICO</div>
+          <div class="overlay-title" style="font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: ${leftTypo.titleMarginBottom}; text-transform: uppercase;">DORES DO CLIENTE</div>
+          <ul class="pain-points-list" style="list-style: none; margin-top: 2px; padding-left: 0; margin-bottom: 0;">
+            ${painHTML}
+          </ul>
+        </div>
       </div>
 
-      <div class="problem-overlay-right" style="position: absolute; top: 100px; right: 50px; width: 330px; padding: 24px; background: rgba(5,5,7,0.90); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 4px solid #e30613; border-radius: 0 12px 12px 0; box-shadow: 0 20px 40px rgba(0,0,0,0.6); z-index: 10;">
-        <div class="overlay-tag" style="font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.3em; color: #e30613; margin-bottom: 6px;">DIAGNÓSTICO ESTRATÉGICO</div>
-        <div class="overlay-title" style="font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; color: #ffffff; margin-bottom: 18px; text-transform: uppercase;">ESTRATÉGIA RECOMENDADA</div>
-        <ul class="strategy-list" style="list-style: none; margin-top: 10px; padding-left: 0;">
-          ${strategyHTML}
-        </ul>
-        <p class="problem-footer-text" style="font-family: Arial, sans-serif; font-size: 10px; color: #52525b; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; margin-top: 12px;">
+      <div class="problem-overlay-right" style="position: absolute; top: 112px; right: 30px; width: 350px; height: 395px; box-sizing: border-box; padding: ${rightTypo.cardPadding}; background: rgba(5,5,7,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-left: 4px solid #e30613; border-radius: 0 12px 12px 0; box-shadow: 0 20px 40px rgba(0,0,0,0.6); z-index: 10; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
+        <div>
+          <div class="overlay-tag" style="font-family: Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.3em; color: #e30613; margin-bottom: 2px;">DIAGNÓSTICO ESTRATÉGICO</div>
+          <div class="overlay-title" style="font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; margin-bottom: ${rightTypo.titleMarginBottom}; text-transform: uppercase;">ESTRATÉGIA RECOMENDADA</div>
+          <ul class="strategy-list" style="list-style: none; margin-top: 2px; padding-left: 0; margin-bottom: 0;">
+            ${strategyHTML}
+          </ul>
+        </div>
+        <p class="problem-footer-text" style="font-family: Arial, sans-serif; font-size: 9px; color: #71717a; line-height: 1.3; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px; margin-top: 6px;">
           Nosso objetivo com esta proposta é remover os bloqueadores e aplicar esta estratégia para acelerar seus resultados.
         </p>
       </div>

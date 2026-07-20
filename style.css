@@ -1922,12 +1922,12 @@ textarea.input-field {
   background-color: #030305 !important;
   box-shadow: none !important;
   position: absolute !important;
-  top: 100px !important;
-  left: 50px !important;
-  width: 330px !important;
-  padding: 24px !important;
+  top: 112px !important;
+  left: 30px !important;
+  width: 350px !important;
   border-left: 4px solid #e30613 !important;
   border-radius: 0 12px 12px 0 !important;
+  max-height: 395px !important;
 }
 
 .print-pdf-mode .problem-overlay-right {
@@ -1937,12 +1937,12 @@ textarea.input-field {
   background-color: #030305 !important;
   box-shadow: none !important;
   position: absolute !important;
-  top: 100px !important;
-  right: 50px !important;
-  width: 330px !important;
-  padding: 24px !important;
+  top: 112px !important;
+  right: 30px !important;
+  width: 350px !important;
   border-left: 4px solid #e30613 !important;
   border-radius: 0 12px 12px 0 !important;
+  max-height: 395px !important;
 }
 
 .print-pdf-mode .contact-box-overlay {
