@@ -13,7 +13,7 @@ const defaultProposalState = {
   customPainPoints: [...nicheTemplates.ecommerce.painPoints],
   customStrategy: nicheTemplates.ecommerce.strategy,
   contractTerm: "Aviso prévio de 30 dias",
-  paymentTerms: "Faturamento mensal via boleto, Pix ou cartão de crédito. Primeira mensalidade em D+7 após a assinatura do contrato.",
+  paymentTerms: "Faturamento mensal via boleto, Pix ou cartão de crédito.\nPrimeira mensalidade em D+7 após a assinatura do contrato.",
   setupPaymentTerms: "Parcelamento em até 6x sem juros.",
   mediaInvestment: "R$ 2.000,00 a R$ 5.000,00 / mês",
   workStart: "D+10 dias após assinatura contratual.",
@@ -47,7 +47,8 @@ const defaultProposalState = {
   contractSetupInstallments: 6,
   contractStartDate: "",
   contractClauses: null,
-  customGuidelines: {}
+  customGuidelines: {},
+  hideStaticInPreview: false
 };
 
 let proposalState = JSON.parse(JSON.stringify(defaultProposalState));
@@ -621,10 +622,15 @@ function setupEventListeners() {
     updatePreviewDebounced();
   });
 
-  document.getElementById("proposal-notes-input").addEventListener("input", (e) => {
-    proposalState.proposalNotes = e.target.value;
-    updatePreviewDebounced();
-  });
+  const proposalNotesEl = document.getElementById("proposal-notes-input");
+  if (proposalNotesEl) {
+    autoResizeTextarea(proposalNotesEl);
+    proposalNotesEl.addEventListener("input", (e) => {
+      proposalState.proposalNotes = e.target.value;
+      autoResizeTextarea(e.target);
+      updatePreviewDebounced();
+    });
+  }
 
   // Checkbox de slides
   document.querySelectorAll(".slide-toggle").forEach(toggle => {
@@ -639,6 +645,58 @@ function setupEventListeners() {
   document.getElementById("btn-download-pdf").addEventListener("click", () => {
     generatePDF();
   });
+
+  // Alternadores de Modo de Visualização (Rolar vs Slides)
+  const btnModeScroll = document.getElementById("btn-mode-scroll");
+  const btnModePres = document.getElementById("btn-mode-presentation");
+  const btnPrevSlide = document.getElementById("btn-prev-slide");
+  const btnNextSlide = document.getElementById("btn-next-slide");
+  const btnFullscreen = document.getElementById("btn-fullscreen-presentation");
+
+  if (btnModeScroll) {
+    btnModeScroll.addEventListener("click", () => setViewMode("scroll"));
+  }
+
+  if (btnModePres) {
+    btnModePres.addEventListener("click", () => setViewMode("presentation"));
+  }
+
+  if (btnPrevSlide) {
+    btnPrevSlide.addEventListener("click", () => navigateSlide(-1));
+  }
+
+  if (btnNextSlide) {
+    btnNextSlide.addEventListener("click", () => navigateSlide(1));
+  }
+
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener("click", toggleFullscreenSlides);
+  }
+
+  // Atalhos de teclado (Setas Esquerda/Direita) para navegação no modo Slides
+  document.addEventListener("keydown", (e) => {
+    const btnPresEl = document.getElementById("btn-mode-presentation");
+    if (btnPresEl && btnPresEl.classList.contains("active-view-mode")) {
+      if (e.key === "ArrowLeft") {
+        navigateSlide(-1);
+      } else if (e.key === "ArrowRight") {
+        navigateSlide(1);
+      }
+    }
+  });
+
+  // Filtro de Estáticos no Preview
+  const btnToggleStatic = document.getElementById("btn-toggle-static");
+  if (btnToggleStatic) {
+    updateStaticButtonState(btnToggleStatic);
+    btnToggleStatic.addEventListener("click", () => {
+      proposalState.hideStaticInPreview = !proposalState.hideStaticInPreview;
+      saveToSessionStorage();
+      updateStaticButtonState(btnToggleStatic);
+      currentSlideIndex = 0;
+      updatePreview();
+    });
+  }
 
   // Mostrar/Ocultar API Key
   const btnToggleKey = document.getElementById("btn-toggle-api-key");
@@ -1065,46 +1123,7 @@ Retorne EXATAMENTE um objeto JSON estruturado no formato abaixo, sem qualquer te
     });
   }
 
-  // --- Modos de Visualização ---
-  const btnModeScroll = document.getElementById("btn-mode-scroll");
-  const btnModePres = document.getElementById("btn-mode-presentation");
-  const slideControls = document.getElementById("slide-nav-controls");
 
-  if (btnModeScroll && btnModePres) {
-    btnModeScroll.addEventListener("click", () => {
-      btnModeScroll.classList.add("active-view-mode");
-      btnModeScroll.style.background = "var(--rakta-red)";
-      btnModeScroll.style.color = "#fff";
-      btnModePres.classList.remove("active-view-mode");
-      btnModePres.style.background = "transparent";
-      btnModePres.style.color = "var(--text-secondary)";
-      if (slideControls) slideControls.classList.add("hidden");
-      document.querySelectorAll(".slide-page-print").forEach(s => s.classList.remove("hidden"));
-    });
-
-    btnModePres.addEventListener("click", () => {
-      btnModePres.classList.add("active-view-mode");
-      btnModePres.style.background = "var(--rakta-red)";
-      btnModePres.style.color = "#fff";
-      btnModeScroll.classList.remove("active-view-mode");
-      btnModeScroll.style.background = "transparent";
-      btnModeScroll.style.color = "var(--text-secondary)";
-      if (slideControls) slideControls.classList.remove("hidden");
-      showCurrentSlideOnly();
-    });
-  }
-
-  const btnPrev = document.getElementById("btn-prev-slide");
-  const btnNext = document.getElementById("btn-next-slide");
-  if (btnPrev && btnNext) {
-    btnPrev.addEventListener("click", () => { navigateSlide(-1); });
-    btnNext.addEventListener("click", () => { navigateSlide(1); });
-  }
-
-  const btnFullscreen = document.getElementById("btn-fullscreen-presentation");
-  if (btnFullscreen) {
-    btnFullscreen.addEventListener("click", () => { toggleFullscreenSlides(); });
-  }
 
   // --- Resetar Proposta ---
   const btnReset = document.getElementById("btn-reset-proposal");
@@ -1273,7 +1292,7 @@ function updatePreview() {
         </div>
       </div>
     `;
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'cover');
   }
 
   // 2. Slide de Problema
@@ -1385,31 +1404,31 @@ function updatePreview() {
         </p>
       </div>
     `;
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'problem');
   }
 
   // 3. Slide Testemunhos
   if (proposalState.includeSlides.testimonials) {
     const slide = createSlideElement("assets/Modelo Rakta - Proposta Comercial (2).webp");
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'testimonials');
   }
 
   // 4. Slide Portfólio Web
   if (proposalState.includeSlides.portfolio_web) {
     const slide = createSlideElement("assets/Modelo Rakta - Proposta Comercial (3).webp");
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'portfolio_web');
   }
 
   // 5. Slide Portfólio Social Media
   if (proposalState.includeSlides.portfolio_social) {
     const slide = createSlideElement("assets/Modelo Rakta - Proposta Comercial (4).webp");
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'portfolio_social');
   }
 
   // 6. Slide Metodologia
   if (proposalState.includeSlides.method) {
     const slide = createSlideElement("assets/Modelo Rakta - Proposta Comercial (5).webp");
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'method');
   }
 
   // 7. Serviços
@@ -1461,7 +1480,7 @@ function updatePreview() {
             <div class="services-grid-preview">${servicesCardsHTML}</div>
           </div>
         `;
-        addSlideToPreview(container, slide, slideIndex++);
+        addSlideToPreview(container, slide, slideIndex++, 'services');
       }
     }
 
@@ -1499,7 +1518,7 @@ function updatePreview() {
             <div class="services-grid-preview">${servicesCardsHTML}</div>
           </div>
         `;
-        addSlideToPreview(container, slide, slideIndex++);
+        addSlideToPreview(container, slide, slideIndex++, 'services');
       }
     }
   }
@@ -1543,6 +1562,8 @@ function updatePreview() {
         investmentRowsHTML += `<tr><td>${c.nameHTML}</td><td class="text-right">${c.priceHTML}</td></tr>`;
       });
     }
+
+    const notesTypo = computeProposalNotesTypography(proposalState.proposalNotes);
 
     slide.innerHTML = `
       <div class="mesh-blob blob-1"></div>
@@ -1597,11 +1618,11 @@ function updatePreview() {
               <h4>CONDIÇÕES COMERCIAIS</h4>
               <ul>
                 <li><strong>Prazo Contratual:</strong> ${proposalState.contractTerm}</li>
-                <li><strong>Serviços Recorrentes:</strong> ${proposalState.paymentTerms}</li>
+                <li><strong>Serviços Recorrentes:</strong> <span style="white-space: pre-line;">${(proposalState.paymentTerms || "").replace(/cartão de crédito\.\s*(?![\r\n])/gi, "cartão de crédito.\n")}</span></li>
                 ${totals.totalOneOffAndSetup > 0 ? `<li><strong>Projetos e Setups:</strong> ${proposalState.setupPaymentTerms}</li>` : ""}
                 ${proposalState.mediaInvestment ? `<li><strong>Investimento em Mídia:</strong> ${proposalState.mediaInvestment}</li>` : ""}
                 <li><strong>Início dos Trabalhos:</strong> ${proposalState.workStart}</li>
-                ${proposalState.proposalNotes ? `<li style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.05);"><strong style="display: block; margin-bottom: 4px; color: #fff;">Observações:</strong><div style="white-space: pre-line; color: var(--text-secondary); line-height: 1.4;">${proposalState.proposalNotes}</div></li>` : ""}
+                ${proposalState.proposalNotes ? `<li style="margin-top: ${notesTypo.marginTop}; padding-top: ${notesTypo.paddingTop}; border-top: 1px dashed rgba(255,255,255,0.05);"><strong style="display: block; font-size: ${notesTypo.titleFontSize}; margin-bottom: ${notesTypo.titleMarginBottom}; color: #fff;">Observações:</strong><div style="white-space: pre-line; color: var(--text-secondary); font-size: ${notesTypo.fontSize}; line-height: ${notesTypo.lineHeight};">${proposalState.proposalNotes}</div></li>` : ""}
               </ul>
             </div>
             <div class="signatures-block">
@@ -1619,7 +1640,7 @@ function updatePreview() {
         </div>
       </div>
     `;
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'investment');
   }
 
   // 9. Slide Fechamento/Logos
@@ -1635,7 +1656,7 @@ function updatePreview() {
         </div>
       </div>
     `;
-    addSlideToPreview(container, slide, slideIndex++);
+    addSlideToPreview(container, slide, slideIndex++, 'logos');
   }
 
   // Ajusta a escala inicial
@@ -1644,10 +1665,18 @@ function updatePreview() {
   // Auto-salva o estado no LocalStorage
   saveToSessionStorage();
 
-  // Se o modo de apresentação estiver ativo, garante que apenas o slide atual fique visível
+  // Se o modo de apresentação estiver ativo, garante que apenas o slide atual fique visível; caso contrário, exibe todos os slides para rolagem
   const btnModePres = document.getElementById("btn-mode-presentation");
   if (btnModePres && btnModePres.classList.contains("active-view-mode")) {
     showCurrentSlideOnly();
+  } else {
+    document.querySelectorAll("#slides-preview .outer-slide-wrapper").forEach(w => {
+      if (proposalState.hideStaticInPreview && w.classList.contains("static-slide")) {
+        w.style.display = "none";
+      } else {
+        w.style.display = "";
+      }
+    });
   }
 }
 
@@ -1679,7 +1708,7 @@ function createSlideElement(bgImagePath = null) {
 }
 
 // Auxiliar: Embrulha o slide e coloca na lista de visualização
-function addSlideToPreview(container, slideElement, number) {
+function addSlideToPreview(container, slideElement, number, slideType = null) {
   const wrapper = document.createElement("div");
   wrapper.className = "slide-wrapper";
   wrapper.appendChild(slideElement);
@@ -1691,6 +1720,18 @@ function addSlideToPreview(container, slideElement, number) {
 
   const outerWrapper = document.createElement("div");
   outerWrapper.className = "outer-slide-wrapper";
+  
+  if (slideType) {
+    outerWrapper.dataset.slideType = slideType;
+    const staticTypes = ['testimonials', 'portfolio_web', 'portfolio_social', 'method', 'logos'];
+    if (staticTypes.includes(slideType)) {
+      outerWrapper.classList.add("static-slide");
+      if (proposalState.hideStaticInPreview) {
+        outerWrapper.style.display = "none";
+      }
+    }
+  }
+
   outerWrapper.appendChild(badge);
   outerWrapper.appendChild(wrapper);
 
@@ -1701,10 +1742,13 @@ function addSlideToPreview(container, slideElement, number) {
 function updateSlideScale() {
   const wrappers = document.querySelectorAll(".slide-wrapper");
   wrappers.forEach(wrapper => {
-    const scale = wrapper.clientWidth / 960; // Escala baseada no container pai de 960px
-    const content = wrapper.querySelector(".slide-content-scale");
-    if (content) {
-      content.style.transform = `scale(${scale})`;
+    const width = wrapper.clientWidth;
+    if (width > 0) {
+      const scale = width / 960; // Escala baseada no container pai de 960px
+      const content = wrapper.querySelector(".slide-content-scale");
+      if (content) {
+        content.style.transform = `scale(${scale})`;
+      }
     }
   });
 }
@@ -1983,6 +2027,55 @@ function getCompactClassForService(description) {
     return "compact-sm";
   }
   return "";
+}
+
+// Redimensiona automaticamente a altura de textareas com base no conteúdo
+function autoResizeTextarea(textareaEl) {
+  if (!textareaEl) return;
+  textareaEl.style.height = "auto";
+  textareaEl.style.height = Math.max(70, textareaEl.scrollHeight + 4) + "px";
+}
+
+// Calcula dinamicamente a tipografia e espaçamentos do bloco de Observações no slide
+function computeProposalNotesTypography(text) {
+  if (!text) return { fontSize: "12px", lineHeight: "1.4", marginTop: "10px", paddingTop: "8px", titleFontSize: "12px", titleMarginBottom: "4px" };
+
+  const len = text.length;
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0).length || 1;
+
+  // Tamanho padrão uniforme com os demais itens do card (12px, line-height 1.4)
+  let fontSize = 12;
+  let lineHeight = 1.4;
+  let marginTop = 10;
+  let paddingTop = 8;
+  let titleFontSize = 12;
+  let titleMarginBottom = 4;
+
+  // Reduz o tamanho APENAS quando houver muito texto acumulado
+  if (len > 480 || lines >= 9) {
+    fontSize = 9;
+    lineHeight = 1.25;
+    marginTop = 5;
+    paddingTop = 4;
+    titleFontSize = 10.5;
+    titleMarginBottom = 2;
+  } else if (len > 320 || lines >= 7) {
+    fontSize = 10.5;
+    lineHeight = 1.3;
+    marginTop = 7;
+    paddingTop = 6;
+    titleFontSize = 11.5;
+    titleMarginBottom = 3;
+  }
+
+  return {
+    fontSize: `${fontSize}px`,
+    lineHeight: `${lineHeight}`,
+    marginTop: `${marginTop}px`,
+    paddingTop: `${paddingTop}px`,
+    titleFontSize: `${titleFontSize}px`,
+    titleMarginBottom: `${titleMarginBottom}px`
+  };
 }
 
 // Carrega a chave da API do Gemini a partir do localStorage
@@ -2269,7 +2362,10 @@ function syncFieldsFromState() {
   if (el("setup-payment-input")) el("setup-payment-input").value = proposalState.setupPaymentTerms || "";
   if (el("media-investment-input")) el("media-investment-input").value = proposalState.mediaInvestment || "";
   if (el("work-start-input")) el("work-start-input").value = proposalState.workStart || "";
-  if (el("proposal-notes-input")) el("proposal-notes-input").value = proposalState.proposalNotes || "";
+  if (el("proposal-notes-input")) {
+    el("proposal-notes-input").value = proposalState.proposalNotes || "";
+    autoResizeTextarea(el("proposal-notes-input"));
+  }
   if (el("override-monthly-input")) el("override-monthly-input").value = proposalState.overrideMonthly !== null ? proposalState.overrideMonthly : "";
   if (el("override-oneoff-input")) el("override-oneoff-input").value = proposalState.overrideOneOffAndSetup !== null ? proposalState.overrideOneOffAndSetup : "";
   if (el("discount-monthly-input")) el("discount-monthly-input").value = proposalState.discountMonthly !== null ? proposalState.discountMonthly : "";
@@ -2644,27 +2740,102 @@ function resetContractClause() {
 // NAVEGAÇÃO DE SLIDES / MODO APRESENTAÇÃO
 // ============================================================
 
+function updateStaticButtonState(btn) {
+  if (!btn) return;
+  if (proposalState.hideStaticInPreview) {
+    btn.style.background = "var(--rakta-red)";
+    btn.style.borderColor = "var(--rakta-red)";
+    btn.style.color = "#fff";
+    btn.querySelector("span").textContent = "Mostrando Editáveis";
+  } else {
+    btn.style.background = "rgba(255,255,255,0.03)";
+    btn.style.borderColor = "rgba(255,255,255,0.08)";
+    btn.style.color = "var(--text-secondary)";
+    btn.querySelector("span").textContent = "Ocultar Estáticos";
+  }
+}
+
 let currentSlideIndex = 0;
 
+function setViewMode(mode) {
+  const btnScroll = document.getElementById("btn-mode-scroll");
+  const btnPres = document.getElementById("btn-mode-presentation");
+  const navControls = document.getElementById("slide-nav-controls");
+  const outerWrappers = document.querySelectorAll("#slides-preview .outer-slide-wrapper");
+
+  if (mode === "scroll") {
+    if (btnScroll) {
+      btnScroll.classList.add("active-view-mode");
+      btnScroll.style.background = "var(--rakta-red)";
+      btnScroll.style.color = "#fff";
+    }
+    if (btnPres) {
+      btnPres.classList.remove("active-view-mode");
+      btnPres.style.background = "transparent";
+      btnPres.style.color = "var(--text-secondary)";
+    }
+    if (navControls) {
+      navControls.classList.add("hidden");
+    }
+
+    outerWrappers.forEach(w => {
+      if (proposalState.hideStaticInPreview && w.classList.contains("static-slide")) {
+        w.style.display = "none";
+      } else {
+        w.style.display = "";
+      }
+    });
+    setTimeout(updateSlideScale, 20);
+  } else if (mode === "presentation") {
+    if (btnPres) {
+      btnPres.classList.add("active-view-mode");
+      btnPres.style.background = "var(--rakta-red)";
+      btnPres.style.color = "#fff";
+    }
+    if (btnScroll) {
+      btnScroll.classList.remove("active-view-mode");
+      btnScroll.style.background = "transparent";
+      btnScroll.style.color = "var(--text-secondary)";
+    }
+    if (navControls) {
+      navControls.classList.remove("hidden");
+    }
+
+    showCurrentSlideOnly();
+  }
+}
+
 function showCurrentSlideOnly() {
-  const slides = document.querySelectorAll("#slides-preview .slide-wrapper");
-  const total = slides.length;
+  const outerWrappers = document.querySelectorAll("#slides-preview .outer-slide-wrapper");
+  const visibleWrappers = Array.from(outerWrappers).filter(w => {
+    return !(proposalState.hideStaticInPreview && w.classList.contains("static-slide"));
+  });
+
+  const total = visibleWrappers.length;
   if (total === 0) return;
 
   if (currentSlideIndex >= total) currentSlideIndex = total - 1;
   if (currentSlideIndex < 0) currentSlideIndex = 0;
 
-  slides.forEach((slide, i) => {
-    slide.style.display = i === currentSlideIndex ? "block" : "none";
+  outerWrappers.forEach(w => {
+    w.style.display = "none";
   });
+
+  if (visibleWrappers[currentSlideIndex]) {
+    visibleWrappers[currentSlideIndex].style.display = "flex";
+  }
 
   const indicator = document.getElementById("slide-nav-indicator");
   if (indicator) indicator.textContent = `${currentSlideIndex + 1}/${total}`;
+  setTimeout(updateSlideScale, 20);
 }
 
 function navigateSlide(direction) {
-  const slides = document.querySelectorAll("#slides-preview .slide-wrapper");
-  const total = slides.length;
+  const outerWrappers = document.querySelectorAll("#slides-preview .outer-slide-wrapper");
+  const visibleWrappers = Array.from(outerWrappers).filter(w => {
+    return !(proposalState.hideStaticInPreview && w.classList.contains("static-slide"));
+  });
+  const total = visibleWrappers.length;
   if (total === 0) return;
 
   currentSlideIndex = Math.max(0, Math.min(total - 1, currentSlideIndex + direction));

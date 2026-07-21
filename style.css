@@ -261,6 +261,13 @@ body {
 
 textarea.input-field {
   resize: vertical;
+  overflow-y: auto;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+#proposal-notes-input {
+  overflow-y: hidden;
+  min-height: 70px;
 }
 
 /* Accordion de Serviços */

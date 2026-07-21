@@ -286,7 +286,7 @@
             <div class="input-group">
               <label for="payment-terms-input">Pagamento Mensal (Recorrência)</label>
               <textarea id="payment-terms-input" class="input-field text-xs"
-                rows="2">Faturamento mensal via boleto, Pix ou cartão de crédito. Primeira mensalidade em D+7 após a assinatura do contrato.</textarea>
+                rows="2">Faturamento mensal via boleto, Pix ou cartão de crédito.&#10;Primeira mensalidade em D+7 após a assinatura do contrato.</textarea>
             </div>
 
             <div class="input-group">
@@ -548,6 +548,11 @@
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
+
+          <button type="button" id="btn-toggle-static"
+            style="margin-bottom: 0; padding: 6px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; height: 32px; justify-content: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s;">
+            <i class="fa-solid fa-filter"></i> <span>Ocultar Estáticos</span>
+          </button>
 
           <button type="button" id="btn-fullscreen-presentation" class="btn-secondary"
             style="margin-bottom: 0; padding: 6px 12px; font-size: 11px; display: flex; align-items: center; gap: 6px; height: 32px; align-items: center; justify-content: center;">
