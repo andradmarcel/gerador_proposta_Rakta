@@ -28,6 +28,8 @@
       }
     }
   </script>
+  <!-- Google Identity Services (OAuth 2.0 & Google Drive API) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -171,6 +173,20 @@
             <button type="button" id="btn-generate-gemini" class="btn-secondary" style="margin-bottom: 0;">
               <i class="fa-solid fa-wand-magic-sparkles"></i> Adaptar Escopos ao Nicho com IA
             </button>
+          </section>
+
+          <!-- Seção: Integração Google Drive -->
+          <section class="sidebar-section">
+            <h3><i class="fa-brands fa-google-drive" style="color: #4285F4;"></i> Google Drive</h3>
+            <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+              Envio automático de PDFs e rascunhos JSON para o seu Google Drive ao gerar propostas e contratos.
+            </p>
+            <button type="button" id="btn-gdrive-connect" class="btn-gdrive">
+              <i class="fa-brands fa-google-drive"></i> Conectar ao Google Drive
+            </button>
+            <div id="gdrive-status-badge" class="gdrive-status-badge disconnected">
+              <i class="fa-solid fa-circle-xmark"></i> Não conectado ao Google Drive
+            </div>
           </section>
 
           <!-- Seção 3: Seleção de Serviços -->
@@ -625,6 +641,9 @@
       </div>
     </div>
   </div>
+
+  <!-- CONTÊINER DE TOAST NOTIFICATIONS FLUTUANTES -->
+  <div id="toast-container" class="toast-container"></div>
 
   <!-- Lógica Javascript da Aplicação (Carregada como módulo ES) -->
   <script type="module" src="app.js"></script>

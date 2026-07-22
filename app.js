@@ -816,16 +816,59 @@ function setupEventListeners() {
     });
   }
 
+  // --- Google Drive Config & Connect Button ---
+  initGoogleDriveAuth(false);
+
+  const btnGDriveConnect = document.getElementById("btn-gdrive-connect");
+  if (btnGDriveConnect) {
+    btnGDriveConnect.addEventListener("click", () => {
+      initGoogleDriveAuth(true);
+    });
+  }
+
   // --- Exportar Rascunho JSON ---
   const exportProposalState = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(proposalState, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
     const clientNameCleaned = proposalState.clientName.replace(/[\\/:*?"<>|]/g, "").trim() || "Cliente";
-    downloadAnchor.setAttribute("download", `Proposta Rakta - ${clientNameCleaned}.json`);
+    const filename = `Proposta Rakta - ${clientNameCleaned}.json`;
+    downloadAnchor.setAttribute("download", filename);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+
+    // Upload automático para Google Drive (Pasta JSONs de Proposta)
+    const config = getGDriveConfig();
+    const jsonBlob = new Blob([JSON.stringify(proposalState, null, 2)], { type: "application/json" });
+    uploadFileToGoogleDrive({
+      name: filename,
+      mimeType: "application/json",
+      blob: jsonBlob,
+      folderId: config.folderPropJson
+    });
+  };
+
+  const exportContractState = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(proposalState, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    const clientNameCleaned = (proposalState.contractCompany || proposalState.clientName || "Cliente").replace(/[\\/:*?"<>|]/g, "").trim();
+    const filename = `Contrato Rakta - ${clientNameCleaned}.json`;
+    downloadAnchor.setAttribute("download", filename);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+
+    // Upload automático para Google Drive (Pasta JSONs de Contrato)
+    const config = getGDriveConfig();
+    const jsonBlob = new Blob([JSON.stringify(proposalState, null, 2)], { type: "application/json" });
+    uploadFileToGoogleDrive({
+      name: filename,
+      mimeType: "application/json",
+      blob: jsonBlob,
+      folderId: config.folderContJson
+    });
   };
 
   const btnExport = document.getElementById("btn-export-json");
@@ -835,7 +878,7 @@ function setupEventListeners() {
 
   const btnExportContract = document.getElementById("btn-export-json-contract");
   if (btnExportContract) {
-    btnExportContract.addEventListener("click", exportProposalState);
+    btnExportContract.addEventListener("click", exportContractState);
   }
 
   // --- Importar Rascunho JSON ---
@@ -1841,6 +1884,196 @@ function hideContractValidationModal() {
   if (modal) modal.classList.remove("active");
 }
 
+// ============================================================
+// INTEGRAÇÃO NATIVA GOOGLE DRIVE API V3 & OAUTH 2.0
+// ============================================================
+
+const DEFAULT_GDRIVE_CONFIG = {
+  clientId: "719477589224-48ql7rttbkqkctlbultqe79k2gaogueq.apps.googleusercontent.com",
+  folderPropPdf: "1liH5IegxLHQstdSsVbH8TCwPu7TP64Y7",
+  folderPropJson: "18t-jltVDtyiqTYxo1p8kKSJo0CR0EgOu",
+  folderContPdf: "1lkuwuOoGsV7Oeh8gaH0T4qN89BEqiF0j",
+  folderContJson: "1QcPzNSKud_DvI3FSYWaGeXRrKtRhiV1K"
+};
+
+let gdriveAccessToken = null;
+let tokenClient = null;
+
+// Função Toast Notification flutuante
+function showToast(title, message, type = "info", duration = 4000) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast-message toast-${type}`;
+  
+  let iconClass = "fa-solid fa-circle-info";
+  if (type === "success") iconClass = "fa-solid fa-circle-check";
+  if (type === "error") iconClass = "fa-solid fa-circle-exclamation";
+
+  toast.innerHTML = `
+    <i class="${iconClass} toast-icon"></i>
+    <div class="toast-content">
+      <div class="toast-title">${title}</div>
+      <div class="toast-desc">${message}</div>
+    </div>
+  `;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    toast.style.transition = "all 0.3s ease";
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// Obter configurações do Google Drive
+function getGDriveConfig() {
+  return { ...DEFAULT_GDRIVE_CONFIG };
+}
+
+function saveGDriveConfigFromUI() {
+  return { ...DEFAULT_GDRIVE_CONFIG };
+}
+
+function loadGDriveConfigUI() {
+  // Configurações mantidas de forma segura nas constantes do código
+}
+
+// Atualiza o indicador de conexão do Google Drive
+function updateGDriveStatusUI(isConnected = false, email = "") {
+  const badge = document.getElementById("gdrive-status-badge");
+  const btn = document.getElementById("btn-gdrive-connect");
+  if (!badge || !btn) return;
+
+  if (isConnected) {
+    badge.className = "gdrive-status-badge connected";
+    badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Conectado ao Google Drive${email ? ` (${email})` : ""}`;
+    btn.className = "btn-gdrive is-connected";
+    btn.innerHTML = `<i class="fa-brands fa-google-drive"></i> Re-conectar Google Drive`;
+  } else {
+    badge.className = "gdrive-status-badge disconnected";
+    badge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> Não conectado ao Google Drive`;
+    btn.className = "btn-gdrive";
+    btn.innerHTML = `<i class="fa-brands fa-google-drive"></i> Conectar ao Google Drive`;
+  }
+}
+
+// Inicializa a autenticação OAuth do Google Identity Services
+function initGoogleDriveAuth(interactive = false) {
+  const config = saveGDriveConfigFromUI();
+  if (!config.clientId) {
+    if (interactive) alert("Por favor, insira um Client ID do Google válido.");
+    return;
+  }
+
+  if (typeof google === "undefined" || !google.accounts || !google.accounts.oauth2) {
+    console.warn("Biblioteca do Google Identity Services ainda não carregada.");
+    if (interactive) alert("Carregando recursos do Google. Tente novamente em alguns segundos.");
+    return;
+  }
+
+  try {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: config.clientId,
+      scope: "https://www.googleapis.com/auth/drive",
+      callback: (tokenResponse) => {
+        if (tokenResponse && tokenResponse.access_token) {
+          gdriveAccessToken = tokenResponse.access_token;
+          sessionStorage.setItem("gdrive_access_token", gdriveAccessToken);
+          updateGDriveStatusUI(true);
+          showToast("Google Drive Conectado!", "Sua conta foi autorizada com sucesso.", "success");
+        } else {
+          console.error("Erro no token do Google:", tokenResponse);
+          showToast("Erro na Conexão", "Não foi possível autorizar o acesso ao Google Drive.", "error");
+        }
+      }
+    });
+
+    if (interactive) {
+      gdriveAccessToken = null;
+      sessionStorage.removeItem("gdrive_access_token");
+      tokenClient.requestAccessToken({ prompt: "select_account consent" });
+    } else {
+      const savedToken = sessionStorage.getItem("gdrive_access_token");
+      if (savedToken) {
+        gdriveAccessToken = savedToken;
+        updateGDriveStatusUI(true);
+      }
+    }
+  } catch (err) {
+    console.error("Erro ao inicializar Google OAuth:", err);
+    if (interactive) alert("Erro ao conectar com Google Drive: " + err.message);
+  }
+}
+
+// Função de Upload Multipart para a Google Drive API v3
+async function uploadFileToGoogleDrive({ name, mimeType, blob, folderId }) {
+  if (!gdriveAccessToken) {
+    console.log("Google Drive não está conectado. Ignorando upload automático.");
+    return null;
+  }
+
+  if (!folderId) {
+    console.log("ID de pasta do Google Drive não configurado.");
+    return null;
+  }
+
+  showToast("Enviando para a Nuvem...", `Salvando ${name} no seu Google Drive...`, "info", 3000);
+
+  try {
+    const metadata = {
+      name: name,
+      mimeType: mimeType,
+      parents: [folderId]
+    };
+
+    const boundary = "------RaktaDriveBoundary" + Math.random().toString(36).substring(2);
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const closeDelimiter = `\r\n--${boundary}--`;
+
+    const metadataPart = delimiter +
+      "Content-Type: application/json; charset=UTF-8\r\n\r\n" +
+      JSON.stringify(metadata);
+
+    const mediaPartHeader = delimiter +
+      `Content-Type: ${mimeType}\r\n\r\n`;
+
+    const payloadBlob = new Blob([
+      metadataPart,
+      mediaPartHeader,
+      blob,
+      closeDelimiter
+    ], { type: `multipart/related; boundary=${boundary}` });
+
+    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&supportsTeamDrives=true&fields=id,name,webViewLink", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${gdriveAccessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`
+      },
+      body: payloadBlob
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || "Erro HTTP no upload.");
+    }
+
+    const data = await response.json();
+    console.log("Arquivo salvo no Google Drive:", data);
+    showToast("Salvo no Google Drive!", `${name} foi salvo na pasta do Drive com sucesso.`, "success", 5000);
+    return data;
+
+  } catch (error) {
+    console.error("Erro ao fazer upload no Google Drive:", error);
+    showToast("Erro no Google Drive", `Não foi possível enviar ${name}: ${error.message}`, "error", 6000);
+    return null;
+  }
+}
+
 function getValidityDateString(days) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -2027,8 +2260,27 @@ async function generatePDF() {
 
     document.body.removeChild(offscreen);
 
-    const clientNameCleaned = proposalState.clientName.replace(/[\\/:*?"<>|]/g, "").trim();
-    pdf.save(`Proposta Rakta - ${clientNameCleaned}.pdf`);
+    const clientNameCleaned = proposalState.clientName.replace(/[\\/:*?"<>|]/g, "").trim() || "Cliente";
+    const pdfFilename = `Proposta Rakta - ${clientNameCleaned}.pdf`;
+    pdf.save(pdfFilename);
+
+    // Upload automático para o Google Drive (Pasta PDFs de Proposta e Pasta JSONs de Proposta)
+    const config = getGDriveConfig();
+    const pdfBlob = pdf.output("blob");
+    uploadFileToGoogleDrive({
+      name: pdfFilename,
+      mimeType: "application/pdf",
+      blob: pdfBlob,
+      folderId: config.folderPropPdf
+    });
+
+    const jsonBlob = new Blob([JSON.stringify(proposalState, null, 2)], { type: "application/json" });
+    uploadFileToGoogleDrive({
+      name: `Proposta Rakta - ${clientNameCleaned}.json`,
+      mimeType: "application/json",
+      blob: jsonBlob,
+      folderId: config.folderPropJson
+    });
 
   } catch (err) {
     console.error("Erro na geração do PDF:", err);
@@ -3456,6 +3708,7 @@ function printContract() {
   updateContractPreview();
   const originalTitle = document.title;
   const clientName = proposalState.clientName || proposalState.contractCompany || "Cliente";
+  const clientNameCleaned = clientName.replace(/[\\/:*?"<>|]/g, "").trim() || "Cliente";
   document.title = `Contrato de Prestação de Serviços ${clientName}`;
   document.body.classList.add("print-contract-mode");
   window.print();
@@ -3463,6 +3716,16 @@ function printContract() {
     document.body.classList.remove("print-contract-mode");
     document.title = originalTitle;
   }, 1000);
+
+  // Upload automático do JSON do Contrato para o Google Drive (Pasta JSONs de Contrato)
+  const config = getGDriveConfig();
+  const jsonBlob = new Blob([JSON.stringify(proposalState, null, 2)], { type: "application/json" });
+  uploadFileToGoogleDrive({
+    name: `Contrato Rakta - ${clientNameCleaned}.json`,
+    mimeType: "application/json",
+    blob: jsonBlob,
+    folderId: config.folderContJson
+  });
 }
 
 // Helpers para renderização de Bônus e design responsivo
