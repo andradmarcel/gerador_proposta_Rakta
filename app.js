@@ -22,7 +22,10 @@ const defaultProposalState = {
   overrideMonthly: null,
   overrideOneOffAndSetup: null,
   discountMonthly: null,
+  discountMonthlyType: "fixed",
   discountOneOff: null,
+  discountOneOffType: "fixed",
+  showIndividualPrices: false,
   includeSlides: {
     cover: true,
     problem: true,
@@ -821,6 +824,16 @@ function setupEventListeners() {
     });
   }
 
+  const discountMonthlyTypeSelect = document.getElementById("discount-monthly-type");
+  if (discountMonthlyTypeSelect) {
+    discountMonthlyTypeSelect.addEventListener("change", (e) => {
+      proposalState.discountMonthlyType = e.target.value;
+      saveToSessionStorage();
+      updatePreview();
+      updateContractPreview();
+    });
+  }
+
   const overrideOneOffInput = document.getElementById("override-oneoff-input");
   if (overrideOneOffInput) {
     overrideOneOffInput.addEventListener("input", (e) => {
@@ -836,6 +849,25 @@ function setupEventListeners() {
       const val = e.target.value.trim();
       proposalState.discountOneOff = val === "" ? null : parseFloat(val);
       updatePreviewDebounced();
+    });
+  }
+
+  const discountOneOffTypeSelect = document.getElementById("discount-oneoff-type");
+  if (discountOneOffTypeSelect) {
+    discountOneOffTypeSelect.addEventListener("change", (e) => {
+      proposalState.discountOneOffType = e.target.value;
+      saveToSessionStorage();
+      updatePreview();
+      updateContractPreview();
+    });
+  }
+
+  const showIndivPricesInput = document.getElementById("show-individual-prices-toggle");
+  if (showIndivPricesInput) {
+    showIndivPricesInput.addEventListener("change", (e) => {
+      proposalState.showIndividualPrices = e.target.checked;
+      saveToSessionStorage();
+      updatePreview();
     });
   }
 
@@ -1438,11 +1470,25 @@ function updatePreview() {
     const autoOneOffAndSetup = totals.autoOneOffAndSetup;
 
     const getServiceCellContent = (s) => {
-      const priceText = s.isBonus ? getBonusPriceTextHTML(s.price) : `<i class="fa-solid fa-circle-check"></i> Incluso`;
+      let priceText;
+      if (s.isBonus) {
+        priceText = getBonusPriceTextHTML(s.price);
+      } else if (proposalState.showIndividualPrices) {
+        priceText = formatCurrency(s.price) + (s.period === "mês" ? "/mês" : "");
+      } else {
+        priceText = `<i class="fa-solid fa-circle-check"></i> Incluso`;
+      }
       let nameHTML = `<div>${getBonusServiceNameHTML(s.name, s.isBonus)}</div>`;
       let priceHTML = `<div style="color: var(--rakta-red); font-weight: bold;">${priceText}</div>`;
       if (s.period === "setup" && s.recurring > 0) {
-        const recurringPriceText = s.isBonus ? getBonusPriceTextHTML(s.recurring, true) : '<i class="fa-solid fa-circle-check"></i> Incluso';
+        let recurringPriceText;
+        if (s.isBonus) {
+          recurringPriceText = getBonusPriceTextHTML(s.recurring, true);
+        } else if (proposalState.showIndividualPrices) {
+          recurringPriceText = formatCurrency(s.recurring) + "/mês";
+        } else {
+          recurringPriceText = '<i class="fa-solid fa-circle-check"></i> Incluso';
+        }
         nameHTML += `<div style="font-size: 9px; color: var(--text-muted); margin-top: 2px; font-weight: normal; padding-left: 8px;">↳ Manutenção de CRM/Chatbot vinculada</div>`;
         priceHTML += `<div style="font-size: 9px; color: var(--text-muted); margin-top: 2px; font-weight: bold;">${recurringPriceText}</div>`;
       }
@@ -3073,7 +3119,10 @@ function syncFieldsFromState() {
   if (el("override-monthly-input")) el("override-monthly-input").value = proposalState.overrideMonthly !== null ? proposalState.overrideMonthly : "";
   if (el("override-oneoff-input")) el("override-oneoff-input").value = proposalState.overrideOneOffAndSetup !== null ? proposalState.overrideOneOffAndSetup : "";
   if (el("discount-monthly-input")) el("discount-monthly-input").value = proposalState.discountMonthly !== null ? proposalState.discountMonthly : "";
+  if (el("discount-monthly-type")) el("discount-monthly-type").value = proposalState.discountMonthlyType || "fixed";
   if (el("discount-oneoff-input")) el("discount-oneoff-input").value = proposalState.discountOneOff !== null ? proposalState.discountOneOff : "";
+  if (el("discount-oneoff-type")) el("discount-oneoff-type").value = proposalState.discountOneOffType || "fixed";
+  if (el("show-individual-prices-toggle")) el("show-individual-prices-toggle").checked = !!proposalState.showIndividualPrices;
   if (el("niche-select") && proposalState.niche) el("niche-select").value = proposalState.niche;
 
   // Sincroniza campos do contrato
@@ -3603,7 +3652,13 @@ function calculateTotals() {
   }
   let totalMonthlyCents = baseMonthlyCents;
   if (proposalState.discountMonthly !== null && proposalState.discountMonthly !== undefined && !isNaN(proposalState.discountMonthly)) {
-    totalMonthlyCents = Math.max(0, baseMonthlyCents - toCents(proposalState.discountMonthly));
+    let discountCents = 0;
+    if (proposalState.discountMonthlyType === "percent") {
+      discountCents = Math.round(baseMonthlyCents * (proposalState.discountMonthly / 100));
+    } else {
+      discountCents = toCents(proposalState.discountMonthly);
+    }
+    totalMonthlyCents = Math.max(0, baseMonthlyCents - discountCents);
   }
 
   let baseOneOffAndSetupCents = autoOneOffAndSetupCents;
@@ -3612,7 +3667,13 @@ function calculateTotals() {
   }
   let totalOneOffAndSetupCents = baseOneOffAndSetupCents;
   if (proposalState.discountOneOff !== null && proposalState.discountOneOff !== undefined && !isNaN(proposalState.discountOneOff)) {
-    totalOneOffAndSetupCents = Math.max(0, baseOneOffAndSetupCents - toCents(proposalState.discountOneOff));
+    let discountCents = 0;
+    if (proposalState.discountOneOffType === "percent") {
+      discountCents = Math.round(baseOneOffAndSetupCents * (proposalState.discountOneOff / 100));
+    } else {
+      discountCents = toCents(proposalState.discountOneOff);
+    }
+    totalOneOffAndSetupCents = Math.max(0, baseOneOffAndSetupCents - discountCents);
   }
 
   return {
